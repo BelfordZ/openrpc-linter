@@ -11,14 +11,6 @@ import (
 type UniqueRule struct{}
 
 func (r *UniqueRule) RunRule(value interface{}, context types.RuleFunctionContext) []types.RuleFunctionResult {
-	if context.Rule == nil || context.Rule.Then == nil || context.Rule.Then.Field == "" {
-		return []types.RuleFunctionResult{{
-			Message: "unique function requires then.field",
-			Path:    resultPath(context.Path),
-		}}
-	}
-	fieldName := context.Rule.Then.Field
-
 	items, ok := uniqueItems(value, context.Path)
 	if !ok {
 		return []types.RuleFunctionResult{{
@@ -46,36 +38,48 @@ func (r *UniqueRule) RunRule(value interface{}, context types.RuleFunctionContex
 	var results []types.RuleFunctionResult
 
 	for _, item := range items {
-		itemMap, ok := item.Value.(map[string]interface{})
-		if !ok {
-			results = append(results, types.RuleFunctionResult{
-				Message: fmt.Sprintf("unique function requires object items to read field '%s'", fieldName),
-				Path:    resultPath(item.Path),
-			})
-			continue
+		compareValue := item.Value
+		comparePath := item.Path
+		if context.TargetField != "" {
+			fieldValue, exists := objectFieldValue(item.Value, context.TargetField)
+			if !exists && !isObject(item.Value) {
+				results = append(results, types.RuleFunctionResult{
+					Message: fmt.Sprintf("unique function expected object items to read field '%s'", context.TargetField),
+					Path:    resultPath(item.Path),
+				})
+				continue
+			}
+			if !exists && ignoreMissing {
+				continue
+			}
+			if !exists {
+				fieldValue = nil
+			}
+			compareValue = fieldValue
+			comparePath = fieldPath(item.Path, context.TargetField)
 		}
 
-		fieldValue, exists := itemMap[fieldName]
-		if !exists && ignoreMissing {
-			continue
-		}
-		if !exists {
-			fieldValue = nil
-		}
-
-		key, displayValue, supported := comparableKey(fieldValue)
+		key, displayValue, supported := comparableKey(compareValue)
 		if !supported {
+			message := "unique function does not support non-primitive values"
+			if context.TargetField != "" {
+				message = fmt.Sprintf("unique function does not support non-primitive value for field '%s'", context.TargetField)
+			}
 			results = append(results, types.RuleFunctionResult{
-				Message: fmt.Sprintf("unique function does not support non-primitive value for field '%s'", fieldName),
-				Path:    resultPath(fieldPath(item.Path, fieldName)),
+				Message: message,
+				Path:    resultPath(comparePath),
 			})
 			continue
 		}
 
 		if _, found := seen[key]; found {
+			message := fmt.Sprintf("Duplicate value: %s", displayValue)
+			if context.TargetField != "" {
+				message = fmt.Sprintf("Duplicate value for field '%s': %s", context.TargetField, displayValue)
+			}
 			results = append(results, types.RuleFunctionResult{
-				Message: fmt.Sprintf("Duplicate value for field '%s': %s", fieldName, displayValue),
-				Path:    resultPath(fieldPath(item.Path, fieldName)),
+				Message: message,
+				Path:    resultPath(comparePath),
 			})
 			continue
 		}

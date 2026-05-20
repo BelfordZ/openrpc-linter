@@ -72,22 +72,15 @@ func TestUniqueRule(t *testing.T) {
 			expected: []string{"unique function option ignoreMissing must be a boolean"},
 		},
 		{
-			name:     "requires then field",
-			value:    []interface{}{},
-			expected: []string{"unique function requires then.field"},
-		},
-		{
 			name:     "requires array input",
-			field:    "name",
 			value:    "ping",
 			expected: []string{"unique function requires array input"},
 		},
 		{
-			name:  "requires object items",
-			field: "name",
-			value: []interface{}{"ping"},
+			name:  "reports duplicate primitive values",
+			value: []interface{}{"alpha", "beta", "alpha"},
 			expected: []string{
-				"unique function requires object items to read field 'name'",
+				`Duplicate value: "alpha"`,
 			},
 		},
 		{
@@ -104,12 +97,14 @@ func TestUniqueRule(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			rule := &types.Rule{
 				Then: &types.RuleAction{
-					Field:           tt.field,
 					Function:        "unique",
 					FunctionOptions: tt.functionOptions,
 				},
 			}
-			results := (&UniqueRule{}).RunRule(tt.value, types.RuleFunctionContext{Rule: rule})
+			results := (&UniqueRule{}).RunRule(tt.value, types.RuleFunctionContext{
+				Rule:        rule,
+				TargetField: tt.field,
+			})
 			got := resultMessages(results)
 			if !reflect.DeepEqual(got, tt.expected) {
 				t.Fatalf("expected messages %+v, got %+v", tt.expected, got)

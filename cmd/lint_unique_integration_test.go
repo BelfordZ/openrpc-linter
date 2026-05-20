@@ -95,10 +95,9 @@ func TestRunLintUniquePerMethodRulesDoNotLeakAcrossMethods(t *testing.T) {
 rules:
   unique-param-names-per-method:
     description: "Param names should be unique within each method"
-    given: "$.methods[*].params"
+    given: "$.methods[*].params[*].name"
     severity: "error"
     then:
-      field: "name"
       function: "unique"
 `
 
@@ -135,10 +134,9 @@ func TestRunLintUniqueWarnSeverityReportsViolationWithoutFailing(t *testing.T) {
 rules:
   unique-method-summaries:
     description: "Method summaries should be unique"
-    given: "$.methods"
+    given: "$.methods[*].summary"
     severity: "warn"
     then:
-      field: "summary"
       function: "unique"
 `
 
@@ -161,7 +159,7 @@ rules:
 	}
 }
 
-func TestRunLintUniqueInvalidArrayItemsReportError(t *testing.T) {
+func TestRunLintUniquePrimitiveValues(t *testing.T) {
 	openrpcContent := `{
   "openrpc": "1.3.2",
   "info": {
@@ -175,25 +173,25 @@ func TestRunLintUniqueInvalidArrayItemsReportError(t *testing.T) {
 rules:
   unique-tags:
     description: "Tags should be unique"
-    given: "$.tags"
+    given: "$.tags[*]"
     severity: "error"
     then:
-      field: "name"
       function: "unique"
 `
 
 	results, err := runLintJSON(t, openrpcContent, rulesContent)
 	if err == nil {
-		t.Fatalf("expected unique to report invalid primitive selections, got nil error and results: %+v", results)
+		t.Fatalf("expected unique to report duplicate primitive selections, got nil error and results: %+v", results)
 	}
 
-	if len(results) == 0 {
-		t.Fatalf("expected at least one result for invalid primitive selections")
+	if len(results) != 1 {
+		t.Fatalf("expected one duplicate primitive result, got: %+v", results)
 	}
-	for _, result := range results {
-		if len(result.Path) == 0 {
-			t.Fatalf("expected invalid primitive result to include item path, got: %+v", results)
-		}
+	if results[0].Message != `Duplicate value: "alpha"` {
+		t.Fatalf("unexpected duplicate primitive result: %+v", results)
+	}
+	if !reflect.DeepEqual(results[0].Path, []string{"$['tags'][2]"}) {
+		t.Fatalf("expected duplicate primitive path, got: %+v", results[0].Path)
 	}
 }
 
@@ -218,10 +216,9 @@ func TestRunLintUniqueIgnoreMissingDefaultsToTrue(t *testing.T) {
 rules:
   unique-method-summaries:
     description: "Method summaries should be unique"
-    given: "$.methods"
+    given: "$.methods[*].summary"
     severity: "error"
     then:
-      field: "summary"
       function: "unique"
 `
 
@@ -256,10 +253,9 @@ func TestRunLintUniqueIgnoreMissingFalseTreatsMissingAsDuplicates(t *testing.T) 
 rules:
   unique-method-summaries:
     description: "Method summaries should be unique"
-    given: "$.methods"
+    given: "$.methods[*].summary"
     severity: "error"
     then:
-      field: "summary"
       function: "unique"
       functionOptions:
         ignoreMissing: false
@@ -279,11 +275,11 @@ rules:
 	}
 }
 
-func TestRunLintUniqueRequiresThenField(t *testing.T) {
+func TestRunLintUniqueRejectsNonCollectionSelection(t *testing.T) {
 	openrpcContent := `{
   "openrpc": "1.3.2",
   "info": {
-    "title": "Missing Field Config Test API",
+    "title": "Invalid Unique Target Test API",
     "version": "1.0.0"
   },
   "methods": [
@@ -293,11 +289,11 @@ func TestRunLintUniqueRequiresThenField(t *testing.T) {
   ]
 }`
 
-	rulesContent := `description: "Missing then.field"
+	rulesContent := `description: "Invalid unique target"
 rules:
   unique-methods:
-    description: "Methods should be unique somehow"
-    given: "$.methods"
+    description: "Method name should be unique somehow"
+    given: "$.methods[0].name"
     severity: "error"
     then:
       function: "unique"
@@ -305,17 +301,17 @@ rules:
 
 	results, err := runLintJSON(t, openrpcContent, rulesContent)
 	if err == nil {
-		t.Fatalf("expected missing then.field to produce a lint failure")
+		t.Fatalf("expected non-collection selection to produce a lint failure")
 	}
 
 	if len(results) != 1 {
 		t.Fatalf("expected a single configuration error result, got: %+v", results)
 	}
 
-	if results[0].Message != "unique function requires then.field" {
+	if results[0].Message != "unique function requires array input" {
 		t.Fatalf("unexpected configuration error message: %+v", results)
 	}
-	if !reflect.DeepEqual(results[0].Path, []string{"$['methods']"}) {
+	if !reflect.DeepEqual(results[0].Path, []string{"$['methods'][0]['name']"}) {
 		t.Fatalf("expected configuration error to include selected collection path, got: %+v", results[0].Path)
 	}
 }
@@ -347,10 +343,9 @@ func TestRunLintUniqueRejectsNonPrimitiveFieldValues(t *testing.T) {
 rules:
   unique-method-result:
     description: "Method results should be unique"
-    given: "$.methods"
+    given: "$.methods[*].result"
     severity: "error"
     then:
-      field: "result"
       function: "unique"
 `
 

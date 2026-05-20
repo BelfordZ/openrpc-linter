@@ -2,33 +2,25 @@ description: "OpenRPC validation rules"
 rules:
   info-title:
     description: "Info must have description. It supports markdown, and usually shows up in documentation. So make good use of it."
-    given: "$.info"
+    given: "$.info.description"
     severity: "error" 
     then:
       function: "truthy"
-      functionOptions:
-        field: "description"
   method-description:
     description: "Method must have description. It supports markdown, and usually shows up in documentation. So make good use of it."
-    given: "$.methods[*]"
+    given: "$.methods[*].description"
     severity: "error"
     then:
       function: "truthy"
-      functionOptions:
-        field: "description"
   method-errors:
     description: "Method must have errors."
-    given: "$.methods[*]"
+    given: "$.methods[*].errors"
     severity: "error"
     then:
       function: "truthy"
-      functionOptions:
-        field: "errors"
   method-examples:
     description: "Method must have examples."
-    given: "$.methods[*]"
+    given: "$.methods[*].examples"
     severity: "error"
     then:
       function: "truthy"
-      functionOptions:
-        field: "examples"
