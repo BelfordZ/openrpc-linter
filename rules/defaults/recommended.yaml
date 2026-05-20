@@ -71,7 +71,7 @@ rules:
       field: "description"
       function: "truthy"
   schema-title:
-    description: "Schema should have a title. Generators use titles to derive variable and type names downstream; without one, fallback names may not produce valid identifiers like methodName()."
+    description: "Schema should have a title. Generators use titles to derive variable and type names downstream."
     given: "$..schema"
     severity: "warn"
     then:
