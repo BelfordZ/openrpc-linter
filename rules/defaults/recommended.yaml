@@ -5,8 +5,8 @@ rules:
     given: "$.info"
     severity: "error"
     then:
-      field: "description"
       function: "truthy"
+<<<<<<< HEAD
   info-license:
     description: "Info should declare a license."
     given: "$.info"
@@ -21,25 +21,32 @@ rules:
     then:
       field: "summary"
       function: "truthy"
+=======
+      functionOptions:
+        field: "description"
+>>>>>>> 7595e95 (refactor: move truthy field config into options)
   method-description:
     description: "Method must have description. It supports markdown, and usually shows up in documentation. So make good use of it."
     given: "$.methods[*]"
     severity: "error"
     then:
-      field: "description"
       function: "truthy"
+      functionOptions:
+        field: "description"
   method-errors:
     description: "Method must have errors."
     given: "$.methods[*]"
     severity: "error"
     then:
-      field: "errors"
       function: "truthy"
+      functionOptions:
+        field: "errors"
   method-examples:
     description: "Method must have examples."
     given: "$.methods[*]"
     severity: "error"
     then:
+<<<<<<< HEAD
       field: "examples"
       function: "truthy"
   result-description:
@@ -129,3 +136,8 @@ rules:
       functionOptions:
         type: "string"
         maxLength: 120
+=======
+      function: "truthy"
+      functionOptions:
+        field: "examples"
+>>>>>>> 7595e95 (refactor: move truthy field config into options)

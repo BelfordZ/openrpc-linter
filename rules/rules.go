@@ -7,7 +7,6 @@ import (
 	"github.com/open-rpc/openrpc-linter/types"
 
 	"github.com/theory/jsonpath"
-	"github.com/theory/jsonpath/spec"
 	"gopkg.in/yaml.v3"
 )
 
@@ -34,20 +33,8 @@ func ExecuteRule(rule *types.Rule, context types.RuleFunctionContext) ([]types.R
 	var allResults []types.RuleFunctionResult
 	for _, node := range path.SelectLocated(document) {
 		valueToValidate := node.Node
-		if rule.Then.Function != "unique" && rule.Then.Field != "" {
-			if itemMap, ok := node.Node.(map[string]interface{}); ok {
-				valueToValidate = itemMap[rule.Then.Field]
-			}
-		}
-
 		itemContext := context
 		itemContext.Path = node.Path.String()
-		if segs := node.Path; len(segs) > 0 {
-			if idx, ok := segs[len(segs)-1].(spec.Index); ok {
-				i := int(idx)
-				itemContext.ArrayIndex = &i
-			}
-		}
 
 		for _, result := range ruleFunc.RunRule(valueToValidate, itemContext) {
 			if result.Message == "" {

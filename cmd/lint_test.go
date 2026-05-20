@@ -41,8 +41,9 @@ rules:
     description: "Info must have description"
     given: "$.info"
     then:
-      field: "description"
       function: "truthy"
+      functionOptions:
+        field: "description"
 `
 
 	tempRules, err := os.CreateTemp("", "test-rules-*.yml")
@@ -82,8 +83,8 @@ rules:
 		t.Errorf("Expected error output with ❌, but got: %s", outputStr)
 	}
 
-	if !strings.Contains(outputStr, "Missing required field 'description' at $.info") {
-		t.Errorf("Expected 'Missing required field 'description' at $.info' in output, but got: %s", outputStr)
+	if !strings.Contains(outputStr, "Missing required field 'description' at $['info']['description']") {
+		t.Errorf("Expected 'Missing required field 'description' at $['info']['description']' in output, but got: %s", outputStr)
 	}
 
 	if !strings.Contains(outputStr, "1 error(s) found") {
@@ -124,8 +125,9 @@ rules:
     description: "Info must have description"
     given: "$.info"
     then:
-      field: "description"
       function: "truthy"
+      functionOptions:
+        field: "description"
 `
 
 	tempRules, err := os.CreateTemp("", "test-rules-*.yml")
@@ -197,8 +199,9 @@ rules:
     given: "$.info"
     severity: "warn"
     then:
-      field: "description"
       function: "truthy"
+      functionOptions:
+        field: "description"
 `
 
 	tempRules, err := os.CreateTemp("", "test-rules-*.yml")
@@ -225,7 +228,7 @@ rules:
 	}
 
 	outputStr := output.String()
-	if !strings.Contains(outputStr, "Missing required field 'description' at $.info") {
+	if !strings.Contains(outputStr, "Missing required field 'description' at $['info']['description']") {
 		t.Fatalf("Expected warning violation output, got:\n%s", outputStr)
 	}
 }
@@ -352,8 +355,9 @@ rules:
     given: "$.info"
     severity: "critical"
     then:
-      field: "description"
       function: "truthy"
+      functionOptions:
+        field: "description"
 `
 
 	tempRules, err := os.CreateTemp("", "test-rules-*.yml")
