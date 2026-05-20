@@ -31,17 +31,15 @@ Create a rules `rules.yml` with rules you want to apply:
 rules:
   method-description:
     description: "Methods must have descriptions"
-    given: "$.methods[*]"
+    given: "$.methods[*].description"
     severity: "error"
     then:
       function: "truthy"
-      functionOptions:
-        field: "description"
 ```
 
 The built-in functions currently include:
 
-- `truthy`: require a field or selected value to be present and non-empty
+- `truthy`: require a selected value to be present and non-empty
 - `unique`: require a field value to be unique across the selected collection
 
 Example `unique` rules:
