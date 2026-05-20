@@ -31,18 +31,16 @@ Create a rules `rules.yml` with rules you want to apply:
 rules:
   method-description:
     description: "Methods must have descriptions"
-    given: "$.methods[*]"
+    given: "$.methods[*].description"
     severity: "error"
     then:
       function: "truthy"
-      functionOptions:
-        field: "description"
 ```
 
 The built-in functions currently include:
 
-- `truthy`: require a field or selected value to be present and non-empty
-- `unique`: require a field value to be unique across the selected collection
+- `truthy`: require the selected value to be present and non-empty
+- `unique`: require selected values to be unique within their selected collection
 
 Example `unique` rules:
 
@@ -50,18 +48,16 @@ Example `unique` rules:
 rules:
   unique-method-names:
     description: "Method names must be unique"
-    given: "$.methods"
+    given: "$.methods[*].name"
     severity: "error"
     then:
-      field: "name"
       function: "unique"
 
   unique-param-names-per-method:
     description: "Param names should be unique within each method"
-    given: "$.methods[*].params"
+    given: "$.methods[*].params[*].name"
     severity: "error"
     then:
-      field: "name"
       function: "unique"
 ```
 

@@ -23,7 +23,6 @@ type Rule struct {
 }
 
 type RuleAction struct {
-	Field           string                 `json:"field,omitempty" yaml:"field,omitempty"`
 	Function        string                 `json:"function,omitempty" yaml:"function,omitempty"`
 	FunctionOptions map[string]interface{} `json:"functionOptions,omitempty" yaml:"functionOptions,omitempty"`
 }
@@ -40,6 +39,9 @@ type RuleFunctionContext struct {
 	Document         interface{} `json:"document"`         // Original document with potential $refs
 	ResolvedDocument interface{} `json:"resolvedDocument"` // Document with all $refs resolved
 	Path             string      `json:"path,omitempty"`   // Normalized path to the selected node.
+	Parent           interface{} `json:"parent,omitempty"` // Parent of the selected node, when known.
+	ParentPath       string      `json:"parentPath,omitempty"`
+	TargetField      string      `json:"targetField,omitempty"` // Terminal object field selected by the rule's JSONPath, when known.
 }
 
 type RuleFunction interface {

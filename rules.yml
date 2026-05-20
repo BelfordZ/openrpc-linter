@@ -11,36 +11,28 @@ rules:
         minItems: 1
   info-title:
     description: "Info must have description. It supports markdown, and usually shows up in documentation. So make good use of it."
-    given: "$.info"
+    given: "$.info.description"
     severity: "error"
     then:
       function: "truthy"
-      functionOptions:
-        field: "description"
   method-description:
     description: "Method must have description. It supports markdown, and usually shows up in documentation. So make good use of it."
-    given: "$.methods[*]"
+    given: "$.methods[*].description"
     severity: "error"
     then:
       function: "truthy"
-      functionOptions:
-        field: "description"
   method-errors:
     description: "Method must have errors."
-    given: "$.methods[*]"
+    given: "$.methods[*].errors"
     severity: "error"
     then:
       function: "truthy"
-      functionOptions:
-        field: "errors"
   method-examples:
     description: "Method must have examples."
-    given: "$.methods[*]"
+    given: "$.methods[*].examples"
     severity: "error"
     then:
       function: "truthy"
-      functionOptions:
-        field: "examples"
   method-min:
     description: "OpenRPC documents should define at least one method."
     given: "$.methods"
@@ -52,50 +44,43 @@ rules:
         minItems: 1
   unique-method-names:
     description: "Method names must be unique."
-    given: "$.methods"
+    given: "$.methods[*].name"
     severity: "error"
     then:
-      field: "name"
       function: "unique"
   unique-method-summary:
     description: "Method summaries should be unique."
-    given: "$.methods"
+    given: "$.methods[*].summary"
     severity: "warn"
     then:
-      field: "summary"
       function: "unique"
   unique-param-names-per-method:
     description: "Param names should be unique within each method."
-    given: "$.methods[*].params"
+    given: "$.methods[*].params[*].name"
     severity: "error"
     then:
-      field: "name"
       function: "unique"
   unique-error-codes-per-method:
     description: "Error codes should be unique within each method."
-    given: "$.methods[*].errors"
+    given: "$.methods[*].errors[*].code"
     severity: "error"
     then:
-      field: "code"
       function: "unique"
   unique-example-names-per-method:
     description: "Example names should be unique within each method."
-    given: "$.methods[*].examples"
+    given: "$.methods[*].examples[*].name"
     severity: "error"
     then:
-      field: "name"
       function: "unique"
   unique-content-descriptor-names:
     description: "Content descriptor names should be unique."
-    given: "$.components.contentDescriptors"
+    given: "$.components.contentDescriptors[*].name"
     severity: "error"
     then:
-      field: "name"
       function: "unique"
   unique-schema-titles:
     description: "Schema titles should be unique."
-    given: "$.components.schemas"
+    given: "$.components.schemas[*].title"
     severity: "error"
     then:
-      field: "title"
       function: "unique"
