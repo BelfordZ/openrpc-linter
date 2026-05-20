@@ -39,11 +39,9 @@ func TestRunLint(t *testing.T) {
 rules:
   info-description:
     description: "Info must have description"
-    given: "$.info"
+    given: "$.info.description"
     then:
       function: "truthy"
-      functionOptions:
-        field: "description"
 `
 
 	tempRules, err := os.CreateTemp("", "test-rules-*.yml")
@@ -83,8 +81,12 @@ rules:
 		t.Errorf("Expected error output with ❌, but got: %s", outputStr)
 	}
 
-	if !strings.Contains(outputStr, "Missing required field 'description' at $['info']['description']") {
-		t.Errorf("Expected 'Missing required field 'description' at $['info']['description']' in output, but got: %s", outputStr)
+	if !strings.Contains(outputStr, "Field must have a truthy value") {
+		t.Errorf("Expected truthy violation in output, but got: %s", outputStr)
+	}
+
+	if !strings.Contains(outputStr, "$['info']['description']") {
+		t.Errorf("Expected description path in output, but got: %s", outputStr)
 	}
 
 	if !strings.Contains(outputStr, "1 error(s) found") {
@@ -123,11 +125,9 @@ func TestRunLintSuccess(t *testing.T) {
 rules:
   info-description:
     description: "Info must have description"
-    given: "$.info"
+    given: "$.info.description"
     then:
       function: "truthy"
-      functionOptions:
-        field: "description"
 `
 
 	tempRules, err := os.CreateTemp("", "test-rules-*.yml")
@@ -196,12 +196,10 @@ func TestRunLintWarningSeverityDoesNotFail(t *testing.T) {
 rules:
   info-description:
     description: "Info must have description"
-    given: "$.info"
+    given: "$.info.description"
     severity: "warn"
     then:
       function: "truthy"
-      functionOptions:
-        field: "description"
 `
 
 	tempRules, err := os.CreateTemp("", "test-rules-*.yml")
@@ -228,7 +226,7 @@ rules:
 	}
 
 	outputStr := output.String()
-	if !strings.Contains(outputStr, "Missing required field 'description' at $['info']['description']") {
+	if !strings.Contains(outputStr, "Field must have a truthy value") {
 		t.Fatalf("Expected warning violation output, got:\n%s", outputStr)
 	}
 }
@@ -261,12 +259,10 @@ func TestRunLintInvalidSeverityFailsFast(t *testing.T) {
 rules:
   info-description:
     description: "Info must have description"
-    given: "$.info"
+    given: "$.info.description"
     severity: "critical"
     then:
       function: "truthy"
-      functionOptions:
-        field: "description"
 `
 
 	tempRules, err := os.CreateTemp("", "test-rules-*.yml")
