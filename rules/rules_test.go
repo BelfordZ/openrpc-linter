@@ -15,7 +15,7 @@ func TestDefaultRulesRecommended(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load recommended: %v", err)
 	}
-	for _, name := range []string{"info-title", "method-description", "method-errors", "method-examples"} {
+	for _, name := range []string{"info-description", "method-description", "method-errors", "method-examples"} {
 		if _, ok := w.Rules[name]; !ok {
 			t.Errorf("missing rule %q", name)
 		}
@@ -44,7 +44,7 @@ func TestRulesYAMLEmptyRulesWithExtends(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ResolvedRules: %v", err)
 	}
-	for _, name := range []string{"info-title", "method-description", "method-errors", "method-examples"} {
+	for _, name := range []string{"info-description", "method-description", "method-errors", "method-examples"} {
 		if _, ok := merged[name]; !ok {
 			t.Errorf("expected inherited rule %q from recommended extension", name)
 		}
