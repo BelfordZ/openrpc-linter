@@ -1,12 +1,5 @@
 description: "OpenRPC validation rules"
 rules:
-  info-title:
-    description: "Info must have a title."
-    given: "$.info"
-    severity: "error"
-    then:
-      field: "title"
-      function: "truthy"
   info-description:
     description: "Info must have description. It supports markdown, and usually shows up in documentation. So make good use of it."
     given: "$.info"
@@ -14,26 +7,12 @@ rules:
     then:
       field: "description"
       function: "truthy"
-  info-version:
-    description: "Info must have a version."
-    given: "$.info"
-    severity: "error"
-    then:
-      field: "version"
-      function: "truthy"
   info-license:
     description: "Info should declare a license."
     given: "$.info"
     severity: "warn"
     then:
       field: "license"
-      function: "truthy"
-  method-name:
-    description: "Method must have a name."
-    given: "$.methods[*]"
-    severity: "error"
-    then:
-      field: "name"
       function: "truthy"
   method-summary:
     description: "Method should have a summary."
@@ -62,13 +41,6 @@ rules:
     severity: "error"
     then:
       field: "examples"
-      function: "truthy"
-  param-schema:
-    description: "Param must have a schema."
-    given: "$.methods[*].params[*]"
-    severity: "error"
-    then:
-      field: "schema"
       function: "truthy"
   result-description:
     description: "Result should have a description."
@@ -99,7 +71,7 @@ rules:
       field: "description"
       function: "truthy"
   schema-title:
-    description: "Schema should have a title."
+    description: "Schema should have a title. Generators use titles to derive variable and type names downstream; without one, fallback names may not produce valid identifiers like methodName()."
     given: "$..schema"
     severity: "warn"
     then:
@@ -113,9 +85,9 @@ rules:
       field: "description"
       function: "truthy"
   methods-non-empty:
-    description: "Document must declare at least one method."
+    description: "Document should declare at least one method."
     given: "$.methods"
-    severity: "error"
+    severity: "warn"
     then:
       function: "schema"
       functionOptions:
@@ -148,9 +120,9 @@ rules:
       functionOptions:
         type: "string"
         maxLength: 120
-  param-description-length:
-    description: "Param description should be 120 characters or fewer."
-    given: "$.methods[*].params[*].description"
+  param-summary-length:
+    description: "Param summary should be 120 characters or fewer."
+    given: "$.methods[*].params[*].summary"
     severity: "warn"
     then:
       function: "schema"

@@ -33,6 +33,7 @@ const canonicalDoc = `{
       "params": [
         {
           "name": "message",
+          "summary": "Echo message",
           "description": "Message to echo back to the caller.",
           "schema": {
             "type": "string",
@@ -105,6 +106,7 @@ func initializeRecommendedScenario(sc *godog.ScenarioContext, s *lintScenario) {
 		for i := range n {
 			params = append(params, map[string]any{
 				"name":        fmt.Sprintf("p%d", i),
+				"summary":     fmt.Sprintf("P%d", i),
 				"description": fmt.Sprintf("Param %d", i),
 				"schema": map[string]any{
 					"type":        "string",
