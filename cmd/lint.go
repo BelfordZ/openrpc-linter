@@ -43,6 +43,8 @@ func normalizeSeverity(severity types.Severity) (types.Severity, error) {
 	}
 
 	switch types.Severity(strings.ToLower(string(severity))) {
+	case types.SeverityIgnore:
+		return types.SeverityIgnore, nil
 	case types.SeverityError:
 		return types.SeverityError, nil
 	case types.SeverityWarn:
@@ -50,7 +52,7 @@ func normalizeSeverity(severity types.Severity) (types.Severity, error) {
 	case types.SeverityInfo:
 		return types.SeverityInfo, nil
 	default:
-		return "", fmt.Errorf("invalid severity %q; expected one of: error, warn, info", severity)
+		return "", fmt.Errorf("invalid severity %q; expected one of: error, warn, info, ignore", severity)
 	}
 }
 
@@ -100,6 +102,9 @@ func RunLint(opts LintOptions) error {
 		if err != nil {
 			fmt.Fprintf(opts.Output, "Error validating rules file: rule %q %v\n", ruleId, err)
 			return err
+		}
+		if normalizedSeverity == types.SeverityIgnore {
+			continue
 		}
 		rule.Severity = normalizedSeverity
 
