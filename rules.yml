@@ -14,29 +14,33 @@ rules:
     given: "$.info"
     severity: "error"
     then:
-      field: "description"
       function: "truthy"
+      functionOptions:
+        field: "description"
   method-description:
     description: "Method must have description. It supports markdown, and usually shows up in documentation. So make good use of it."
     given: "$.methods[*]"
     severity: "error"
     then:
-      field: "description"
       function: "truthy"
+      functionOptions:
+        field: "description"
   method-errors:
     description: "Method must have errors."
     given: "$.methods[*]"
     severity: "error"
     then:
-      field: "errors"
       function: "truthy"
+      functionOptions:
+        field: "errors"
   method-examples:
     description: "Method must have examples."
     given: "$.methods[*]"
     severity: "error"
     then:
-      field: "examples"
       function: "truthy"
+      functionOptions:
+        field: "examples"
   method-min:
     description: "OpenRPC documents should define at least one method."
     given: "$.methods"

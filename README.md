@@ -34,8 +34,9 @@ rules:
     given: "$.methods[*]"
     severity: "error"
     then:
-      field: "description"
       function: "truthy"
+      functionOptions:
+        field: "description"
 ```
 
 The built-in functions currently include:
