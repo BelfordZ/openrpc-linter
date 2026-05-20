@@ -1,5 +1,7 @@
 package types
 
+import "github.com/theory/jsonpath"
+
 type Severity string
 
 const (
@@ -36,11 +38,12 @@ type RuleFunctionResult struct {
 }
 
 type RuleFunctionContext struct {
-	Rule             *Rule       `json:"rule"`
-	RuleID           string      `json:"ruleId"`
-	Document         interface{} `json:"document"`         // Original document with potential $refs
-	ResolvedDocument interface{} `json:"resolvedDocument"` // Document with all $refs resolved
-	Path             string      `json:"path,omitempty"`   // Normalized path to the selected node.
+	Rule             *Rule          `json:"rule"`
+	RuleID           string         `json:"ruleId"`
+	Document         interface{}    `json:"document"`         // Original document with potential $refs
+	ResolvedDocument interface{}    `json:"resolvedDocument"` // Document with all $refs resolved
+	Path             string         `json:"path,omitempty"`   // Normalized path to the selected node.
+	GivenPath        *jsonpath.Path `json:"-"`                // Parsed JSONPath from Rule.Given.
 }
 
 type RuleFunction interface {

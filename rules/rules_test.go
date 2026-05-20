@@ -5,10 +5,20 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/open-rpc/openrpc-linter/functions"
 	"github.com/open-rpc/openrpc-linter/types"
 
 	"gopkg.in/yaml.v3"
 )
+
+type givenPathCaptureRule struct{}
+
+func (r *givenPathCaptureRule) RunRule(value interface{}, context types.RuleFunctionContext) []types.RuleFunctionResult {
+	if context.GivenPath == nil {
+		return []types.RuleFunctionResult{{Message: "missing given path"}}
+	}
+	return nil
+}
 
 func TestDefaultRulesRecommended(t *testing.T) {
 	w, err := LoadRulesFile(GetRuleDefaultsFS(), "recommended.yaml")
@@ -75,10 +85,9 @@ func TestResolvedRulesExtends(t *testing.T) {
 		Rules: map[string]types.Rule{
 			"info-title": {
 				Description: "override",
-				Given:       "$.info",
+				Given:       "$.info.title",
 				Then: &types.RuleAction{
-					Function:        "truthy",
-					FunctionOptions: map[string]interface{}{"field": "title"},
+					Function: "truthy",
 				},
 			},
 		},
@@ -87,7 +96,7 @@ func TestResolvedRulesExtends(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if merged["info-title"].Then.FunctionOptions["field"] != "title" {
+	if merged["info-title"].Given != "$.info.title" {
 		t.Errorf("user rule should override recommended, got %+v", merged["info-title"])
 	}
 	if _, ok := merged["method-errors"]; !ok {
@@ -109,10 +118,9 @@ func TestExecuteRule(t *testing.T) {
 			name: "truthy rule with missing field",
 			rule: &types.Rule{
 				Description: "Test missing field",
-				Given:       "$.info",
+				Given:       "$.info.description",
 				Then: &types.RuleAction{
-					Function:        "truthy",
-					FunctionOptions: map[string]interface{}{"field": "description"},
+					Function: "truthy",
 				},
 			},
 			document: map[string]interface{}{
@@ -129,10 +137,9 @@ func TestExecuteRule(t *testing.T) {
 			name: "truthy rule with missing field on selected method includes path",
 			rule: &types.Rule{
 				Description: "Test missing method description",
-				Given:       "$.methods[*]",
+				Given:       "$.methods[*].description",
 				Then: &types.RuleAction{
-					Function:        "truthy",
-					FunctionOptions: map[string]interface{}{"field": "description"},
+					Function: "truthy",
 				},
 			},
 			document: map[string]interface{}{
@@ -150,10 +157,9 @@ func TestExecuteRule(t *testing.T) {
 			name: "truthy rule with present field",
 			rule: &types.Rule{
 				Description: "Test present field",
-				Given:       "$.info",
+				Given:       "$.info.description",
 				Then: &types.RuleAction{
-					Function:        "truthy",
-					FunctionOptions: map[string]interface{}{"field": "description"},
+					Function: "truthy",
 				},
 			},
 			document: map[string]interface{}{
@@ -166,13 +172,13 @@ func TestExecuteRule(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name: "truthy rule rejects non-string field option",
+			name: "truthy rule ignores functionOptions field",
 			rule: &types.Rule{
-				Description: "Test invalid field option",
+				Description: "Test ignored field option",
 				Given:       "$.info",
 				Then: &types.RuleAction{
 					Function:        "truthy",
-					FunctionOptions: map[string]interface{}{"field": 12},
+					FunctionOptions: map[string]interface{}{"field": "description"},
 				},
 			},
 			document: map[string]interface{}{
@@ -180,9 +186,25 @@ func TestExecuteRule(t *testing.T) {
 					"title": "Test API",
 				},
 			},
+			expectError: false,
+		},
+		{
+			name: "truthy rule with falsey selected value",
+			rule: &types.Rule{
+				Description: "Test falsey field",
+				Given:       "$.info.description",
+				Then: &types.RuleAction{
+					Function: "truthy",
+				},
+			},
+			document: map[string]interface{}{
+				"info": map[string]interface{}{
+					"description": "",
+				},
+			},
 			expectError:  true,
-			expectedMsg:  "truthy function option field must be a non-empty string",
-			expectedPath: []string{"$['info']"},
+			expectedMsg:  "Field must have a truthy value",
+			expectedPath: []string{"$['info']['description']"},
 		},
 		{
 			name: "schema rule with invalid methods length",
@@ -224,10 +246,9 @@ func TestExecuteRule(t *testing.T) {
 			name: "jsonpath with no matches",
 			rule: &types.Rule{
 				Description: "Test missing path",
-				Given:       "$.nonexistent",
+				Given:       "$.nonexistent[*]",
 				Then: &types.RuleAction{
-					Function:        "truthy",
-					FunctionOptions: map[string]interface{}{"field": "title"},
+					Function: "truthy",
 				},
 			},
 			document: map[string]interface{}{
@@ -243,8 +264,7 @@ func TestExecuteRule(t *testing.T) {
 				Description: "Test invalid path",
 				Given:       "$.info[",
 				Then: &types.RuleAction{
-					Function:        "truthy",
-					FunctionOptions: map[string]interface{}{"field": "title"},
+					Function: "truthy",
 				},
 			},
 			document: map[string]interface{}{
@@ -298,6 +318,81 @@ func TestExecuteRule(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestExecuteRuleTruthyReportsMissingFieldsUnderWildcardParent(t *testing.T) {
+	rule := &types.Rule{
+		Description: "Method descriptions",
+		Given:       "$.methods[*].description",
+		Then: &types.RuleAction{
+			Function: "truthy",
+		},
+	}
+	document := map[string]interface{}{
+		"methods": []interface{}{
+			map[string]interface{}{"name": "first", "description": "First method"},
+			map[string]interface{}{"name": "second"},
+			map[string]interface{}{"name": "third", "description": ""},
+		},
+	}
+
+	results, err := ExecuteRule(rule, types.RuleFunctionContext{
+		Rule:     rule,
+		Document: document,
+	})
+	if err != nil {
+		t.Fatalf("expected truthy rule to execute successfully, got: %v", err)
+	}
+	if len(results) != 2 {
+		t.Fatalf("expected missing and falsey description results, got %+v", results)
+	}
+	if results[0].Message != "Missing required field 'description' at $['methods'][1]['description']" {
+		t.Fatalf("unexpected missing-field result: %+v", results[0])
+	}
+	if !reflect.DeepEqual(results[0].Path, []string{"$['methods'][1]['description']"}) {
+		t.Fatalf("expected missing field path, got %+v", results[0].Path)
+	}
+	if results[1].Message != "Field must have a truthy value" {
+		t.Fatalf("unexpected falsey result: %+v", results[1])
+	}
+	if !reflect.DeepEqual(results[1].Path, []string{"$['methods'][2]['description']"}) {
+		t.Fatalf("expected falsey field path, got %+v", results[1].Path)
+	}
+}
+
+func TestExecuteRulePassesGivenPathToRuleFunctions(t *testing.T) {
+	const functionName = "captureGivenPath"
+	previous := functions.FunctionRegistry[functionName]
+	functions.FunctionRegistry[functionName] = &givenPathCaptureRule{}
+	defer func() {
+		if previous == nil {
+			delete(functions.FunctionRegistry, functionName)
+			return
+		}
+		functions.FunctionRegistry[functionName] = previous
+	}()
+
+	rule := &types.Rule{
+		Description: "Capture path",
+		Given:       "$.info.title",
+		Then: &types.RuleAction{
+			Function: functionName,
+		},
+	}
+	document := map[string]interface{}{
+		"info": map[string]interface{}{"title": "Test API"},
+	}
+
+	results, err := ExecuteRule(rule, types.RuleFunctionContext{
+		Rule:     rule,
+		Document: document,
+	})
+	if err != nil {
+		t.Fatalf("expected capture rule to execute successfully, got: %v", err)
+	}
+	if len(results) != 0 {
+		t.Fatalf("expected GivenPath to be available, got %+v", results)
 	}
 }
 
@@ -543,10 +638,9 @@ func TestGetFieldFromNode(t *testing.T) {
 func BenchmarkExecuteRule(b *testing.B) {
 	rule := &types.Rule{
 		Description: "Benchmark rule",
-		Given:       "$.info",
+		Given:       "$.info.description",
 		Then: &types.RuleAction{
-			Function:        "truthy",
-			FunctionOptions: map[string]interface{}{"field": "description"},
+			Function: "truthy",
 		},
 	}
 

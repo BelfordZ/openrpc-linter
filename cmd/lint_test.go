@@ -39,11 +39,9 @@ func TestRunLint(t *testing.T) {
 rules:
   info-description:
     description: "Info must have description"
-    given: "$.info"
+    given: "$.info.description"
     then:
       function: "truthy"
-      functionOptions:
-        field: "description"
 `
 
 	tempRules, err := os.CreateTemp("", "test-rules-*.yml")
@@ -123,11 +121,9 @@ func TestRunLintSuccess(t *testing.T) {
 rules:
   info-description:
     description: "Info must have description"
-    given: "$.info"
+    given: "$.info.description"
     then:
       function: "truthy"
-      functionOptions:
-        field: "description"
 `
 
 	tempRules, err := os.CreateTemp("", "test-rules-*.yml")
@@ -196,12 +192,10 @@ func TestRunLintWarningSeverityDoesNotFail(t *testing.T) {
 rules:
   info-description:
     description: "Info must have description"
-    given: "$.info"
+    given: "$.info.description"
     severity: "warn"
     then:
       function: "truthy"
-      functionOptions:
-        field: "description"
 `
 
 	tempRules, err := os.CreateTemp("", "test-rules-*.yml")
@@ -352,12 +346,10 @@ func TestRunLintInvalidSeverityFailsFast(t *testing.T) {
 rules:
   info-description:
     description: "Info must have description"
-    given: "$.info"
+    given: "$.info.description"
     severity: "critical"
     then:
       function: "truthy"
-      functionOptions:
-        field: "description"
 `
 
 	tempRules, err := os.CreateTemp("", "test-rules-*.yml")

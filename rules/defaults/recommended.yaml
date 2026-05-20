@@ -2,11 +2,10 @@ description: "OpenRPC validation rules"
 rules:
   info-description:
     description: "Info must have description. It supports markdown, and usually shows up in documentation. So make good use of it."
-    given: "$.info"
+    given: "$.info.description"
     severity: "error"
     then:
       function: "truthy"
-<<<<<<< HEAD
   info-license:
     description: "Info should declare a license."
     given: "$.info"
@@ -21,32 +20,23 @@ rules:
     then:
       field: "summary"
       function: "truthy"
-=======
-      functionOptions:
-        field: "description"
->>>>>>> 7595e95 (refactor: move truthy field config into options)
   method-description:
     description: "Method must have description. It supports markdown, and usually shows up in documentation. So make good use of it."
-    given: "$.methods[*]"
+    given: "$.methods[*].description"
     severity: "error"
     then:
       function: "truthy"
-      functionOptions:
-        field: "description"
   method-errors:
     description: "Method must have errors."
-    given: "$.methods[*]"
+    given: "$.methods[*].errors"
     severity: "error"
     then:
       function: "truthy"
-      functionOptions:
-        field: "errors"
   method-examples:
     description: "Method must have examples."
-    given: "$.methods[*]"
+    given: "$.methods[*].examples"
     severity: "error"
     then:
-<<<<<<< HEAD
       field: "examples"
       function: "truthy"
   result-description:
@@ -136,8 +126,3 @@ rules:
       functionOptions:
         type: "string"
         maxLength: 120
-=======
-      function: "truthy"
-      functionOptions:
-        field: "examples"
->>>>>>> 7595e95 (refactor: move truthy field config into options)

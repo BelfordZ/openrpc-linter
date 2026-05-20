@@ -29,9 +29,26 @@ func ExecuteRule(rule *types.Rule, context types.RuleFunctionContext) ([]types.R
 	if context.ResolvedDocument != nil {
 		document = context.ResolvedDocument
 	}
+	context.GivenPath = path
 
 	var allResults []types.RuleFunctionResult
-	for _, node := range path.SelectLocated(document) {
+	selectedNodes := path.SelectLocated(document)
+
+	if rule.Then.Function == "truthy" {
+		itemContext := context
+		itemContext.Path = ""
+		for _, result := range ruleFunc.RunRule(nil, itemContext) {
+			if result.Message == "" {
+				continue
+			}
+			allResults = append(allResults, result)
+		}
+		if len(allResults) > 0 {
+			return allResults, nil
+		}
+	}
+
+	for _, node := range selectedNodes {
 		valueToValidate := node.Node
 		itemContext := context
 		itemContext.Path = node.Path.String()
