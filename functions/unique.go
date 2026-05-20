@@ -11,6 +11,10 @@ import (
 type UniqueRule struct{}
 
 func (r *UniqueRule) RunRule(value interface{}, context types.RuleFunctionContext) []types.RuleFunctionResult {
+	if value == nil && context.Parent != nil {
+		return nil
+	}
+
 	if context.Rule == nil || context.Rule.Then == nil || context.Rule.Then.Field == "" {
 		return []types.RuleFunctionResult{{
 			Message: "unique function requires then.field",
