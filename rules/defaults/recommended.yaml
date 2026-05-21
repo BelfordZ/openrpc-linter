@@ -2,87 +2,75 @@ description: "OpenRPC validation rules"
 rules:
   info-description:
     description: "Info must have description. It supports markdown, and usually shows up in documentation. So make good use of it."
-    given: "$.info"
+    given: "$.info.description"
     severity: "error"
     then:
-      field: "description"
       function: "truthy"
   info-license:
     description: "Info should declare a license."
-    given: "$.info"
+    given: "$.info.license"
     severity: "warn"
     then:
-      field: "license"
       function: "truthy"
   method-summary:
     description: "Method should have a summary."
-    given: "$.methods[*]"
+    given: "$.methods[*].summary"
     severity: "warn"
     then:
-      field: "summary"
       function: "truthy"
   method-description:
     description: "Method must have description. It supports markdown, and usually shows up in documentation. So make good use of it."
-    given: "$.methods[*]"
+    given: "$.methods[*].description"
     severity: "error"
     then:
-      field: "description"
       function: "truthy"
   method-errors:
     description: "Method must have errors."
-    given: "$.methods[*]"
+    given: "$.methods[*].errors"
     severity: "error"
     then:
-      field: "errors"
       function: "truthy"
   method-examples:
     description: "Method must have examples."
-    given: "$.methods[*]"
+    given: "$.methods[*].examples"
     severity: "error"
     then:
-      field: "examples"
       function: "truthy"
   result-description:
     description: "Result should have a description."
-    given: "$.methods[*].result"
+    given: "$.methods[*].result.description"
     severity: "warn"
     then:
-      field: "description"
       function: "truthy"
   tag-description:
     description: "Tag should have a description."
-    given: "$.methods[*].tags[*]"
+    given: "$.methods[*].tags[*].description"
     severity: "warn"
     then:
-      field: "description"
       function: "truthy"
   error-description:
     description: "Error should have a description."
-    given: "$.methods[*].errors[*]"
+    given: "$.methods[*].errors[*].description"
     severity: "warn"
     then:
-      field: "description"
       function: "truthy"
   example-description:
     description: "Example should have a description."
-    given: "$.methods[*].examples[*]"
+    given: "$.methods[*].examples[*].description"
     severity: "warn"
     then:
-      field: "description"
       function: "truthy"
   schema-title:
     description: "Schema should have a title. Generators use titles to derive variable and type names downstream."
-    given: "$..schema"
+    given: "$..schema.title"
     severity: "warn"
     then:
-      field: "title"
       function: "truthy"
   schema-description:
     description: "Schema should have a description."
-    given: "$..schema"
+    given: "$..schema.description"
     severity: "warn"
     then:
-      field: "description"
       function: "truthy"
   methods-non-empty:
     description: "Document should declare at least one method."

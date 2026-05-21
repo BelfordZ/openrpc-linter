@@ -39,9 +39,8 @@ func TestRunLint(t *testing.T) {
 rules:
   info-description:
     description: "Info must have description"
-    given: "$.info"
+    given: "$.info.description"
     then:
-      field: "description"
       function: "truthy"
 `
 
@@ -82,8 +81,8 @@ rules:
 		t.Errorf("Expected error output with ❌, but got: %s", outputStr)
 	}
 
-	if !strings.Contains(outputStr, "Missing required field 'description' at $.info") {
-		t.Errorf("Expected 'Missing required field 'description' at $.info' in output, but got: %s", outputStr)
+	if !strings.Contains(outputStr, "Missing required field 'description' at $['info']['description']") {
+		t.Errorf("Expected 'Missing required field 'description' at $['info']['description']' in output, but got: %s", outputStr)
 	}
 
 	if !strings.Contains(outputStr, "1 error(s) found") {
@@ -122,9 +121,8 @@ func TestRunLintSuccess(t *testing.T) {
 rules:
   info-description:
     description: "Info must have description"
-    given: "$.info"
+    given: "$.info.description"
     then:
-      field: "description"
       function: "truthy"
 `
 
@@ -194,10 +192,9 @@ func TestRunLintWarningSeverityDoesNotFail(t *testing.T) {
 rules:
   info-description:
     description: "Info must have description"
-    given: "$.info"
+    given: "$.info.description"
     severity: "warn"
     then:
-      field: "description"
       function: "truthy"
 `
 
@@ -225,7 +222,7 @@ rules:
 	}
 
 	outputStr := output.String()
-	if !strings.Contains(outputStr, "Missing required field 'description' at $.info") {
+	if !strings.Contains(outputStr, "Missing required field 'description' at $['info']['description']") {
 		t.Fatalf("Expected warning violation output, got:\n%s", outputStr)
 	}
 }
@@ -321,6 +318,160 @@ rules:
 	}
 }
 
+func TestRunLintHandlesCyclicSchemaRef(t *testing.T) {
+	openrpcContent := `{
+  "openrpc": "1.4.0",
+  "info": {
+    "title": "Recursive Schema API",
+    "version": "1.0.0"
+  },
+  "methods": [
+    {
+      "name": "getCategory",
+      "params": [],
+      "result": {
+        "name": "category",
+        "schema": {
+          "$ref": "#/components/schemas/Category"
+        }
+      }
+    }
+  ],
+  "components": {
+    "schemas": {
+      "Category": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "parent": {
+            "$ref": "#/components/schemas/Category"
+          }
+        }
+      }
+    }
+  }
+}`
+
+	rulesContent := `description: "Cyclic ref smoke test"
+rules:
+  info-title:
+    description: "Info title must exist"
+    given: "$.info.title"
+    severity: "error"
+    then:
+      function: "truthy"
+`
+
+	results, err := runLintJSON(t, openrpcContent, rulesContent)
+	if err != nil {
+		t.Fatalf("RunLint should handle cyclic schema refs, got: %v", err)
+	}
+	if len(results) != 0 {
+		t.Fatalf("expected no lint results, got %+v", results)
+	}
+}
+
+// TestRunLintDescendantDescriptionReportsMissingCandidates exercises the
+// schema-aware descendant path that the old truthy implementation could not
+// satisfy: $..description must surface MISSING descriptions on every
+// OpenRPC object the meta-schema says could legally hold one, not just the
+// ones that already exist. The test relies on the full lint pipeline
+// (resolveRefs -> selector.Build -> ExecuteRule) so a regression in any
+// stage is caught.
+func TestRunLintDescendantDescriptionReportsMissingCandidates(t *testing.T) {
+	openrpcContent := `{
+        "openrpc": "1.4.0",
+        "info": {"title": "Demo", "version": "1.0.0"},
+        "methods": [
+          {"name": "foo", "params": [{"name": "p"}]}
+        ]
+      }`
+
+	rulesContent := `description: "Descendant description rule"
+rules:
+  descendant-description:
+    description: "Every OpenRPC object should have description"
+    given: "$..description"
+    severity: "error"
+    then:
+      function: "truthy"
+`
+
+	results, err := runLintJSON(t, openrpcContent, rulesContent)
+	if err == nil {
+		t.Fatalf("expected linting errors for missing descriptions")
+	}
+
+	// Three candidate parents per the v1.4 meta-schema: info, the method,
+	// and the content descriptor. None of them have description.
+	wantPaths := map[string]bool{
+		"$['info']['description']":                    false,
+		"$['methods'][0]['description']":              false,
+		"$['methods'][0]['params'][0]['description']": false,
+	}
+	for _, r := range results {
+		if r.RuleID != "descendant-description" {
+			continue
+		}
+		for _, p := range r.Path {
+			if _, ok := wantPaths[p]; ok {
+				wantPaths[p] = true
+			}
+		}
+	}
+	for path, seen := range wantPaths {
+		if !seen {
+			t.Errorf("expected descendant-description to report %s; results: %+v", path, results)
+		}
+	}
+}
+
+// TestRunLintCompoundDescendantPath exercises a path with a descendant in
+// the middle ($.methods..result.schema). The selector must peel the
+// descendant ..result, then evaluate .schema as a parent-field check on
+// each resolved result node — and report missing schema fields.
+func TestRunLintCompoundDescendantPath(t *testing.T) {
+	openrpcContent := `{
+        "openrpc": "1.4.0",
+        "info": {"title": "Demo", "version": "1.0.0"},
+        "methods": [
+          {"name": "foo", "params": [], "result": {"name": "r"}}
+        ]
+      }`
+
+	rulesContent := `description: "Result schemas must exist"
+rules:
+  result-schema:
+    description: "Each result must have a schema"
+    given: "$.methods..result.schema"
+    severity: "error"
+    then:
+      function: "truthy"
+`
+
+	results, err := runLintJSON(t, openrpcContent, rulesContent)
+	if err == nil {
+		t.Fatalf("expected linting errors for missing result.schema")
+	}
+
+	found := false
+	for _, r := range results {
+		if r.RuleID != "result-schema" {
+			continue
+		}
+		for _, p := range r.Path {
+			if p == "$['methods'][0]['result']['schema']" {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("expected missing-schema diagnostic at $['methods'][0]['result']['schema'], got: %+v", results)
+	}
+}
+
 func TestRunLintInvalidSeverityFailsFast(t *testing.T) {
 	openrpcContent := map[string]interface{}{
 		"info": map[string]interface{}{
@@ -349,10 +500,9 @@ func TestRunLintInvalidSeverityFailsFast(t *testing.T) {
 rules:
   info-description:
     description: "Info must have description"
-    given: "$.info"
+    given: "$.info.description"
     severity: "critical"
     then:
-      field: "description"
       function: "truthy"
 `
 

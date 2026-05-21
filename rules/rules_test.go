@@ -5,10 +5,20 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/open-rpc/openrpc-linter/functions"
 	"github.com/open-rpc/openrpc-linter/types"
 
 	"gopkg.in/yaml.v3"
 )
+
+type givenPathCaptureRule struct{}
+
+func (r *givenPathCaptureRule) RunRule(value interface{}, context types.RuleFunctionContext) []types.RuleFunctionResult {
+	if context.GivenPath == nil {
+		return []types.RuleFunctionResult{{Message: "missing given path"}}
+	}
+	return nil
+}
 
 func TestDefaultRulesRecommended(t *testing.T) {
 	w, err := LoadRulesFile(GetRuleDefaultsFS(), "recommended.yaml")
@@ -73,14 +83,20 @@ func TestResolvedRulesExtends(t *testing.T) {
 	rw := &RulesWrapper{
 		Extends: []types.RuleDefaults{types.RuleExtensionRecommended},
 		Rules: map[string]types.Rule{
-			"info-title": {Description: "override", Given: "$.info", Then: &types.RuleAction{Field: "title", Function: "truthy"}},
+			"info-title": {
+				Description: "override",
+				Given:       "$.info.title",
+				Then: &types.RuleAction{
+					Function: "truthy",
+				},
+			},
 		},
 	}
 	merged, err := rw.ResolvedRules()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if merged["info-title"].Then.Field != "title" {
+	if merged["info-title"].Given != "$.info.title" {
 		t.Errorf("user rule should override recommended, got %+v", merged["info-title"])
 	}
 	if _, ok := merged["method-errors"]; !ok {
@@ -102,9 +118,8 @@ func TestExecuteRule(t *testing.T) {
 			name: "truthy rule with missing field",
 			rule: &types.Rule{
 				Description: "Test missing field",
-				Given:       "$.info",
+				Given:       "$.info.description",
 				Then: &types.RuleAction{
-					Field:    "description",
 					Function: "truthy",
 				},
 			},
@@ -116,15 +131,14 @@ func TestExecuteRule(t *testing.T) {
 				},
 			},
 			expectError: true,
-			expectedMsg: "Missing required field 'description' at $.info",
+			expectedMsg: "Missing required field 'description' at $['info']['description']",
 		},
 		{
 			name: "truthy rule with missing field on selected method includes path",
 			rule: &types.Rule{
 				Description: "Test missing method description",
-				Given:       "$.methods[*]",
+				Given:       "$.methods[*].description",
 				Then: &types.RuleAction{
-					Field:    "description",
 					Function: "truthy",
 				},
 			},
@@ -136,16 +150,15 @@ func TestExecuteRule(t *testing.T) {
 				},
 			},
 			expectError:  true,
-			expectedMsg:  "Missing required field 'description' at $.methods[0]",
-			expectedPath: []string{"$['methods'][0]"},
+			expectedMsg:  "Missing required field 'description' at $['methods'][0]['description']",
+			expectedPath: []string{"$['methods'][0]['description']"},
 		},
 		{
 			name: "truthy rule with present field",
 			rule: &types.Rule{
 				Description: "Test present field",
-				Given:       "$.info",
+				Given:       "$.info.description",
 				Then: &types.RuleAction{
-					Field:    "description",
 					Function: "truthy",
 				},
 			},
@@ -157,6 +170,41 @@ func TestExecuteRule(t *testing.T) {
 				},
 			},
 			expectError: false,
+		},
+		{
+			name: "truthy rule ignores functionOptions field",
+			rule: &types.Rule{
+				Description: "Test ignored field option",
+				Given:       "$.info",
+				Then: &types.RuleAction{
+					Function:        "truthy",
+					FunctionOptions: map[string]interface{}{"field": "description"},
+				},
+			},
+			document: map[string]interface{}{
+				"info": map[string]interface{}{
+					"title": "Test API",
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "truthy rule with falsey selected value",
+			rule: &types.Rule{
+				Description: "Test falsey field",
+				Given:       "$.info.description",
+				Then: &types.RuleAction{
+					Function: "truthy",
+				},
+			},
+			document: map[string]interface{}{
+				"info": map[string]interface{}{
+					"description": "",
+				},
+			},
+			expectError:  true,
+			expectedMsg:  "Field must have a truthy value",
+			expectedPath: []string{"$['info']['description']"},
 		},
 		{
 			name: "schema rule with invalid methods length",
@@ -183,7 +231,6 @@ func TestExecuteRule(t *testing.T) {
 				Description: "Test unknown function",
 				Given:       "$.info",
 				Then: &types.RuleAction{
-					Field:    "title",
 					Function: "unknownFunction",
 				},
 			},
@@ -199,9 +246,8 @@ func TestExecuteRule(t *testing.T) {
 			name: "jsonpath with no matches",
 			rule: &types.Rule{
 				Description: "Test missing path",
-				Given:       "$.nonexistent",
+				Given:       "$.nonexistent[*]",
 				Then: &types.RuleAction{
-					Field:    "title",
 					Function: "truthy",
 				},
 			},
@@ -218,7 +264,6 @@ func TestExecuteRule(t *testing.T) {
 				Description: "Test invalid path",
 				Given:       "$.info[",
 				Then: &types.RuleAction{
-					Field:    "title",
 					Function: "truthy",
 				},
 			},
@@ -273,6 +318,256 @@ func TestExecuteRule(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestExecuteRuleTruthyReportsMissingFieldsUnderWildcardParent(t *testing.T) {
+	rule := &types.Rule{
+		Description: "Method descriptions",
+		Given:       "$.methods[*].description",
+		Then: &types.RuleAction{
+			Function: "truthy",
+		},
+	}
+	document := map[string]interface{}{
+		"methods": []interface{}{
+			map[string]interface{}{"name": "first", "description": "First method"},
+			map[string]interface{}{"name": "second"},
+			map[string]interface{}{"name": "third", "description": ""},
+		},
+	}
+
+	results, err := ExecuteRule(rule, types.RuleFunctionContext{
+		Rule:     rule,
+		Document: document,
+	})
+	if err != nil {
+		t.Fatalf("expected truthy rule to execute successfully, got: %v", err)
+	}
+	if len(results) != 2 {
+		t.Fatalf("expected missing and falsey description results, got %+v", results)
+	}
+	if results[0].Message != "Missing required field 'description' at $['methods'][1]['description']" {
+		t.Fatalf("unexpected missing-field result: %+v", results[0])
+	}
+	if !reflect.DeepEqual(results[0].Path, []string{"$['methods'][1]['description']"}) {
+		t.Fatalf("expected missing field path, got %+v", results[0].Path)
+	}
+	if results[1].Message != "Field must have a truthy value" {
+		t.Fatalf("unexpected falsey result: %+v", results[1])
+	}
+	if !reflect.DeepEqual(results[1].Path, []string{"$['methods'][2]['description']"}) {
+		t.Fatalf("expected falsey field path, got %+v", results[1].Path)
+	}
+}
+
+func TestExecuteRulePassesGivenPathToRuleFunctions(t *testing.T) {
+	const functionName = "captureGivenPath"
+	previous := functions.FunctionRegistry[functionName]
+	functions.FunctionRegistry[functionName] = &givenPathCaptureRule{}
+	defer func() {
+		if previous == nil {
+			delete(functions.FunctionRegistry, functionName)
+			return
+		}
+		functions.FunctionRegistry[functionName] = previous
+	}()
+
+	rule := &types.Rule{
+		Description: "Capture path",
+		Given:       "$.info.title",
+		Then: &types.RuleAction{
+			Function: functionName,
+		},
+	}
+	document := map[string]interface{}{
+		"info": map[string]interface{}{"title": "Test API"},
+	}
+
+	results, err := ExecuteRule(rule, types.RuleFunctionContext{
+		Rule:     rule,
+		Document: document,
+	})
+	if err != nil {
+		t.Fatalf("expected capture rule to execute successfully, got: %v", err)
+	}
+	if len(results) != 0 {
+		t.Fatalf("expected GivenPath to be available, got %+v", results)
+	}
+}
+
+func TestExecuteRuleUniqueUsesResolvedDocumentAndAddsFieldPath(t *testing.T) {
+	rule := &types.Rule{
+		Description: "Unique resolved method names",
+		Given:       "$.methods",
+		Then: &types.RuleAction{
+			Field:    "name",
+			Function: "unique",
+		},
+	}
+	originalDocument := map[string]interface{}{
+		"methods": []interface{}{
+			map[string]interface{}{"name": "ping"},
+			map[string]interface{}{"name": "pong"},
+		},
+	}
+	resolvedDocument := map[string]interface{}{
+		"methods": []interface{}{
+			map[string]interface{}{"name": "ping"},
+			map[string]interface{}{"name": "ping"},
+		},
+	}
+
+	results, err := ExecuteRule(rule, types.RuleFunctionContext{
+		Rule:             rule,
+		Document:         originalDocument,
+		ResolvedDocument: resolvedDocument,
+	})
+	if err != nil {
+		t.Fatalf("expected unique rule to execute successfully, got: %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("expected one duplicate result from resolved document, got %+v", results)
+	}
+	if results[0].Message != `Duplicate value for field 'name': "ping"` {
+		t.Fatalf("unexpected duplicate message: %+v", results)
+	}
+	if !reflect.DeepEqual(results[0].Path, []string{"$['methods'][1]['name']"}) {
+		t.Fatalf("expected duplicate field path on unique result, got %+v", results[0].Path)
+	}
+}
+
+func TestExecuteRuleUniqueScopesNestedWildcardCollections(t *testing.T) {
+	rule := &types.Rule{
+		Description: "Unique param names per method",
+		Given:       "$.methods[*].params",
+		Then: &types.RuleAction{
+			Field:    "name",
+			Function: "unique",
+		},
+	}
+	document := map[string]interface{}{
+		"methods": []interface{}{
+			map[string]interface{}{
+				"name": "first",
+				"params": []interface{}{
+					map[string]interface{}{"name": "id"},
+				},
+			},
+			map[string]interface{}{
+				"name": "second",
+				"params": []interface{}{
+					map[string]interface{}{"name": "id"},
+					map[string]interface{}{"name": "id"},
+				},
+			},
+		},
+	}
+
+	results, err := ExecuteRule(rule, types.RuleFunctionContext{
+		Rule:     rule,
+		Document: document,
+	})
+	if err != nil {
+		t.Fatalf("expected unique rule to execute successfully, got: %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("expected one duplicate result scoped to the second method, got %+v", results)
+	}
+	if !reflect.DeepEqual(results[0].Path, []string{"$['methods'][1]['params'][1]['name']"}) {
+		t.Fatalf("expected nested duplicate field path, got %+v", results[0].Path)
+	}
+}
+
+func TestExecuteRuleUniqueHandlesMapBackedCollections(t *testing.T) {
+	rule := &types.Rule{
+		Description: "Unique schema titles",
+		Given:       "$.components.schemas",
+		Then: &types.RuleAction{
+			Field:    "title",
+			Function: "unique",
+		},
+	}
+	document := map[string]interface{}{
+		"components": map[string]interface{}{
+			"schemas": map[string]interface{}{
+				"Balance": map[string]interface{}{"title": "Shared"},
+				"Amount":  map[string]interface{}{"title": "Shared"},
+			},
+		},
+	}
+
+	results, err := ExecuteRule(rule, types.RuleFunctionContext{
+		Rule:     rule,
+		Document: document,
+	})
+	if err != nil {
+		t.Fatalf("expected unique rule to execute successfully, got: %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("expected one duplicate result for map-backed collection, got %+v", results)
+	}
+	if results[0].Message != `Duplicate value for field 'title': "Shared"` {
+		t.Fatalf("unexpected duplicate message: %+v", results)
+	}
+	if !reflect.DeepEqual(results[0].Path, []string{"$['components']['schemas']['Balance']['title']"}) {
+		t.Fatalf("expected map duplicate field path, got %+v", results[0].Path)
+	}
+}
+
+func TestExecuteRuleUniqueNoMatchesReturnsNoResults(t *testing.T) {
+	rule := &types.Rule{
+		Description: "Unique missing schemas",
+		Given:       "$.components.schemas",
+		Then: &types.RuleAction{
+			Field:    "title",
+			Function: "unique",
+		},
+	}
+	document := map[string]interface{}{
+		"components": map[string]interface{}{},
+	}
+
+	results, err := ExecuteRule(rule, types.RuleFunctionContext{
+		Rule:     rule,
+		Document: document,
+	})
+	if err != nil {
+		t.Fatalf("expected no-match unique rule to execute successfully, got: %v", err)
+	}
+	if len(results) != 0 {
+		t.Fatalf("expected no results for no-match unique rule, got %+v", results)
+	}
+}
+
+func TestExecuteRuleUniqueRejectsNonCollectionSelection(t *testing.T) {
+	rule := &types.Rule{
+		Description: "Invalid unique target",
+		Given:       "$.info.title",
+		Then: &types.RuleAction{
+			Field:    "name",
+			Function: "unique",
+		},
+	}
+	document := map[string]interface{}{
+		"info": map[string]interface{}{"title": "Example"},
+	}
+
+	results, err := ExecuteRule(rule, types.RuleFunctionContext{
+		Rule:     rule,
+		Document: document,
+	})
+	if err != nil {
+		t.Fatalf("expected unique rule to report non-collection selection as result, got: %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("expected one non-collection result, got %+v", results)
+	}
+	if results[0].Message != "unique function requires array input" {
+		t.Fatalf("unexpected result: %+v", results)
+	}
+	if !reflect.DeepEqual(results[0].Path, []string{"$['info']['title']"}) {
+		t.Fatalf("expected selected scalar path, got %+v", results[0].Path)
 	}
 }
 
@@ -343,9 +638,8 @@ func TestGetFieldFromNode(t *testing.T) {
 func BenchmarkExecuteRule(b *testing.B) {
 	rule := &types.Rule{
 		Description: "Benchmark rule",
-		Given:       "$.info",
+		Given:       "$.info.description",
 		Then: &types.RuleAction{
-			Field:    "description",
 			Function: "truthy",
 		},
 	}

@@ -1,15 +1,16 @@
 package types
 
 import (
-	"github.com/santhosh-tekuri/jsonschema/v6"
+	"github.com/open-rpc/openrpc-linter/selector"
+	"github.com/theory/jsonpath"
 )
 
 type Severity string
 
 const (
-	SeverityError Severity = "error"
-	SeverityWarn  Severity = "warn"
-	SeverityInfo  Severity = "info"
+	SeverityError  Severity = "error"
+	SeverityWarn   Severity = "warn"
+	SeverityInfo   Severity = "info"
 	SeverityIgnore Severity = "ignore"
 )
 
@@ -18,6 +19,8 @@ type RuleDefaults string
 const (
 	RuleExtensionRecommended RuleDefaults = "recommended"
 )
+
+type ResolvingRefs = map[string]bool
 
 type Rule struct {
 	Description string      `json:"description" yaml:"description"`
@@ -39,21 +42,24 @@ type RuleFunctionResult struct {
 	RuleID  string   `json:"ruleId,omitempty"`
 }
 
-type RuleFunctionSchema struct {
-	Name        string                 `json:"name"`
-	Description string                 `json:"description,omitempty"`
-	Schema      map[string]interface{} `json:"schema,omitempty"`
-}
-
 type RuleFunctionContext struct {
-	Rule             *Rule       `json:"rule"`
-	RuleID           string      `json:"ruleId"`
-	Document         interface{} `json:"document"`         // Original document with potential $refs
-	ResolvedDocument interface{} `json:"resolvedDocument"` // Document with all $refs resolved
-	ArrayIndex       *int        `json:"arrayIndex,omitempty"`
+	Rule             *Rule          `json:"rule"`
+	RuleID           string         `json:"ruleId"`
+	Document         interface{}    `json:"document"`         // Original document with potential $refs
+	ResolvedDocument interface{}    `json:"resolvedDocument"` // Document with all $refs resolved
+	Path             string         `json:"path,omitempty"`   // Normalized path to the selected node.
+	GivenPath        *jsonpath.Path `json:"-"`                // Parsed JSONPath from Rule.Given.
+
+	// Index is the schema-aware document index, built once per lint run.
+	// Rule functions read it via Target; they should not need it directly.
+	Index *selector.Index `json:"-"`
+
+	// Target is the per-iteration unit set by the rules executor. Each call
+	// to RunRule corresponds to one Target so functions can uniformly
+	// reason about value vs. field mode, presence vs. absence, etc.
+	Target *selector.Target `json:"-"`
 }
 
 type RuleFunction interface {
 	RunRule(value interface{}, context RuleFunctionContext) []RuleFunctionResult
-	GetSchema() *jsonschema.Schema
 }
