@@ -2,131 +2,137 @@ package functions
 
 import (
 	"fmt"
-	"sort"
 	"strconv"
 
+	"github.com/open-rpc/openrpc-linter/selector"
 	"github.com/open-rpc/openrpc-linter/types"
+	"github.com/theory/jsonpath"
+	"github.com/theory/jsonpath/spec"
 )
 
-type UniqueRule struct{}
+const globalScopeKey = ""
+
+type UniqueRule struct {
+	seen       map[string]map[string]string
+	scopePaths []spec.NormalizedPath
+	scopeReady bool
+	scopeErr   error
+}
+
+func NewUniqueRule() *UniqueRule {
+	return &UniqueRule{seen: map[string]map[string]string{}}
+}
 
 func (r *UniqueRule) RunRule(value interface{}, context types.RuleFunctionContext) []types.RuleFunctionResult {
-	// Skip targets the selector emitted as "this field could exist here but
-	// doesn't" — unique has nothing to say about a missing collection. Truthy
-	// is the function that turns those into diagnostics.
-	if t := context.Target; t != nil && t.Field != "" && !t.Exists {
+	t := context.Target
+	if t == nil {
 		return nil
 	}
 
-	if context.Rule == nil || context.Rule.Then == nil || context.Rule.Then.Field == "" {
+	if err := r.ensureScopes(context); err != nil {
 		return []types.RuleFunctionResult{{
-			Message: "unique function requires then.field",
-			Path:    resultPath(context.Path),
+			Message: "unique scope option invalid: " + err.Error(),
+			Path:    resultPath(t.PathString()),
 		}}
 	}
-	fieldName := context.Rule.Then.Field
 
-	items, ok := uniqueItems(value, context.Path)
-	if !ok {
-		return []types.RuleFunctionResult{{
-			Message: "unique function requires array input",
-			Path:    resultPath(context.Path),
-		}}
+	scopeKey, inScope := r.scopeKeyFor(t)
+	if !inScope {
+		return nil
 	}
 
 	ignoreMissing := true
-	if context.Rule.Then.FunctionOptions != nil {
+	if context.Rule != nil && context.Rule.Then != nil && context.Rule.Then.FunctionOptions != nil {
 		rawIgnoreMissing, exists := context.Rule.Then.FunctionOptions["ignoreMissing"]
 		if exists {
 			parsed, ok := rawIgnoreMissing.(bool)
 			if !ok {
 				return []types.RuleFunctionResult{{
 					Message: "unique function option ignoreMissing must be a boolean",
-					Path:    resultPath(context.Path),
+					Path:    resultPath(t.PathString()),
 				}}
 			}
 			ignoreMissing = parsed
 		}
 	}
 
-	seen := make(map[string]struct{})
-	var results []types.RuleFunctionResult
-
-	for _, item := range items {
-		itemMap, ok := item.Value.(map[string]interface{})
-		if !ok {
-			results = append(results, types.RuleFunctionResult{
-				Message: fmt.Sprintf("unique function requires object items to read field '%s'", fieldName),
-				Path:    resultPath(item.Path),
-			})
-			continue
+	if t.Field != "" && !t.Exists {
+		if ignoreMissing {
+			return nil
 		}
-
-		fieldValue, exists := itemMap[fieldName]
-		if !exists && ignoreMissing {
-			continue
-		}
-		if !exists {
-			fieldValue = nil
-		}
-
-		key, displayValue, supported := comparableKey(fieldValue)
-		if !supported {
-			results = append(results, types.RuleFunctionResult{
-				Message: fmt.Sprintf("unique function does not support non-primitive value for field '%s'", fieldName),
-				Path:    resultPath(fieldPath(item.Path, fieldName)),
-			})
-			continue
-		}
-
-		if _, found := seen[key]; found {
-			results = append(results, types.RuleFunctionResult{
-				Message: fmt.Sprintf("Duplicate value for field '%s': %s", fieldName, displayValue),
-				Path:    resultPath(fieldPath(item.Path, fieldName)),
-			})
-			continue
-		}
-
-		seen[key] = struct{}{}
+		value = nil
 	}
 
-	return results
-}
-
-type uniqueItem struct {
-	Value interface{}
-	Path  string
-}
-
-func uniqueItems(value interface{}, basePath string) ([]uniqueItem, bool) {
-	switch v := value.(type) {
-	case []interface{}:
-		items := make([]uniqueItem, 0, len(v))
-		for i, item := range v {
-			items = append(items, uniqueItem{
-				Value: item,
-				Path:  fmt.Sprintf("%s[%d]", basePath, i),
-			})
-		}
-		return items, true
-	case map[string]interface{}:
-		keys := make([]string, 0, len(v))
-		for key := range v {
-			keys = append(keys, key)
-		}
-		sort.Strings(keys)
-
-		items := make([]uniqueItem, 0, len(v))
-		for _, key := range keys {
-			items = append(items, uniqueItem{
-				Value: v[key],
-				Path:  basePath + pathNameSegment(key),
-			})
-		}
-		return items, true
-	default:
-		return nil, false
+	key, display, ok := comparableKey(value)
+	if !ok {
+		return []types.RuleFunctionResult{{
+			Message: "unique value must be primitive",
+			Path:    resultPath(t.PathString()),
+		}}
 	}
+
+	if r.seen == nil {
+		r.seen = map[string]map[string]string{}
+	}
+	bucket, exists := r.seen[scopeKey]
+	if !exists {
+		bucket = map[string]string{}
+		r.seen[scopeKey] = bucket
+	}
+	if firstPath, dup := bucket[key]; dup {
+		return []types.RuleFunctionResult{{
+			Message: fmt.Sprintf("Duplicate value %s (first seen at %s)", display, firstPath),
+			Path:    resultPath(t.PathString()),
+		}}
+	}
+	bucket[key] = t.PathString()
+	return nil
+}
+
+func (r *UniqueRule) ensureScopes(ctx types.RuleFunctionContext) error {
+	if r.scopeReady {
+		return r.scopeErr
+	}
+	r.scopeReady = true
+
+	if ctx.Rule == nil || ctx.Rule.Then == nil || ctx.Rule.Then.FunctionOptions == nil {
+		return nil
+	}
+	raw, _ := ctx.Rule.Then.FunctionOptions["scope"].(string)
+	if raw == "" {
+		return nil
+	}
+
+	p, err := jsonpath.Parse(raw)
+	if err != nil {
+		r.scopeErr = err
+		return err
+	}
+
+	doc := ctx.Document
+	if ctx.ResolvedDocument != nil {
+		doc = ctx.ResolvedDocument
+	}
+	for _, n := range p.SelectLocated(doc) {
+		r.scopePaths = append(r.scopePaths, n.Path)
+	}
+	return nil
+}
+
+func (r *UniqueRule) scopeKeyFor(t *selector.Target) (string, bool) {
+	if len(r.scopePaths) == 0 {
+		return globalScopeKey, true
+	}
+	bestIdx, bestLen := -1, -1
+	for i, sp := range r.scopePaths {
+		if selector.IsUnder(t.Path, sp) && len(sp) > bestLen {
+			bestIdx, bestLen = i, len(sp)
+		}
+	}
+	if bestIdx < 0 {
+		return "", false
+	}
+	return r.scopePaths[bestIdx].String(), true
 }
 
 func comparableKey(value interface{}) (key string, displayValue string, supported bool) {
