@@ -4,12 +4,24 @@ import (
 	"fmt"
 
 	"github.com/open-rpc/openrpc-linter/functions"
+	"github.com/open-rpc/openrpc-linter/selector"
 	"github.com/open-rpc/openrpc-linter/types"
 
 	"github.com/theory/jsonpath"
 	"gopkg.in/yaml.v3"
 )
 
+// ExecuteRule runs a single rule against the document by:
+//
+//  1. parsing rule.Given into a JSONPath,
+//  2. asking the selector for a uniform []Target (value mode for paths
+//     that point at concrete nodes; field mode for paths whose terminal
+//     segment is a field name; descendant-field mode for $..f / $.scope..f
+//     using the schema-aware Index),
+//  3. invoking the registered function once per Target.
+//
+// Every function — truthy, unique, schema, future ones — sees the same
+// Target shape, so there is no per-function special-casing here.
 func ExecuteRule(rule *types.Rule, context types.RuleFunctionContext) ([]types.RuleFunctionResult, error) {
 	if rule.Then == nil {
 		return []types.RuleFunctionResult{}, nil
@@ -31,34 +43,21 @@ func ExecuteRule(rule *types.Rule, context types.RuleFunctionContext) ([]types.R
 	}
 	context.GivenPath = path
 
+	targets := selector.Select(path, document, context.Index)
+
 	var allResults []types.RuleFunctionResult
-	selectedNodes := path.SelectLocated(document)
-
-	if rule.Then.Function == "truthy" {
+	for i := range targets {
+		t := targets[i]
 		itemContext := context
-		itemContext.Path = ""
-		for _, result := range ruleFunc.RunRule(nil, itemContext) {
-			if result.Message == "" {
-				continue
-			}
-			allResults = append(allResults, result)
-		}
-		if len(allResults) > 0 {
-			return allResults, nil
-		}
-	}
+		itemContext.Path = t.PathString()
+		itemContext.Target = &t
 
-	for _, node := range selectedNodes {
-		valueToValidate := node.Node
-		itemContext := context
-		itemContext.Path = node.Path.String()
-
-		for _, result := range ruleFunc.RunRule(valueToValidate, itemContext) {
+		for _, result := range ruleFunc.RunRule(t.Node, itemContext) {
 			if result.Message == "" {
 				continue
 			}
 			if len(result.Path) == 0 {
-				result.Path = []string{node.Path.String()}
+				result.Path = []string{t.PathString()}
 			}
 			allResults = append(allResults, result)
 		}

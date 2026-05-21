@@ -11,6 +11,13 @@ import (
 type UniqueRule struct{}
 
 func (r *UniqueRule) RunRule(value interface{}, context types.RuleFunctionContext) []types.RuleFunctionResult {
+	// Skip targets the selector emitted as "this field could exist here but
+	// doesn't" — unique has nothing to say about a missing collection. Truthy
+	// is the function that turns those into diagnostics.
+	if t := context.Target; t != nil && t.Field != "" && !t.Exists {
+		return nil
+	}
+
 	if context.Rule == nil || context.Rule.Then == nil || context.Rule.Then.Field == "" {
 		return []types.RuleFunctionResult{{
 			Message: "unique function requires then.field",

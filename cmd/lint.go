@@ -9,6 +9,7 @@ import (
 
 	"github.com/open-rpc/openrpc-linter/reporters"
 	"github.com/open-rpc/openrpc-linter/rules"
+	"github.com/open-rpc/openrpc-linter/selector"
 	"github.com/open-rpc/openrpc-linter/types"
 
 	"github.com/spf13/cobra"
@@ -77,6 +78,11 @@ func RunLint(opts LintOptions) error {
 		return err
 	}
 
+	// Build the schema-aware index once per lint run. The selector and
+	// every rule function consume Targets derived from this index;
+	// rebuilding per-rule would be wasteful and would lose the cache.
+	index := selector.Build(resolvedDoc, selector.NewV14())
+
 	rulesWrapper, err := rules.LoadRulesFileFromPath(opts.RulesFile)
 	if err != nil {
 		return err
@@ -113,6 +119,7 @@ func RunLint(opts LintOptions) error {
 			RuleID:           ruleId,
 			Document:         openrpcDoc,
 			ResolvedDocument: resolvedDoc,
+			Index:            index,
 		}
 		results, err := rules.ExecuteRule(&rule, context)
 

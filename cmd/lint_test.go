@@ -315,6 +315,102 @@ rules:
 	}
 	if strings.Contains(outputStr, "Missing required field 'description'") {
 		t.Fatalf("Expected method description violation to be skipped, got:\n%s", outputStr)
+// TestRunLintDescendantDescriptionReportsMissingCandidates exercises the
+// schema-aware descendant path that the old truthy implementation could not
+// satisfy: $..description must surface MISSING descriptions on every
+// OpenRPC object the meta-schema says could legally hold one, not just the
+// ones that already exist. The test relies on the full lint pipeline
+// (resolveRefs -> selector.Build -> ExecuteRule) so a regression in any
+// stage is caught.
+func TestRunLintDescendantDescriptionReportsMissingCandidates(t *testing.T) {
+	openrpcContent := `{
+        "openrpc": "1.4.0",
+        "info": {"title": "Demo", "version": "1.0.0"},
+        "methods": [
+          {"name": "foo", "params": [{"name": "p"}]}
+        ]
+      }`
+
+	rulesContent := `description: "Descendant description rule"
+rules:
+  descendant-description:
+    description: "Every OpenRPC object should have description"
+    given: "$..description"
+    severity: "error"
+    then:
+      function: "truthy"
+`
+
+	results, err := runLintJSON(t, openrpcContent, rulesContent)
+	if err == nil {
+		t.Fatalf("expected linting errors for missing descriptions")
+	}
+
+	// Three candidate parents per the v1.4 meta-schema: info, the method,
+	// and the content descriptor. None of them have description.
+	wantPaths := map[string]bool{
+		"$['info']['description']":                          false,
+		"$['methods'][0]['description']":                    false,
+		"$['methods'][0]['params'][0]['description']":       false,
+	}
+	for _, r := range results {
+		if r.RuleID != "descendant-description" {
+			continue
+		}
+		for _, p := range r.Path {
+			if _, ok := wantPaths[p]; ok {
+				wantPaths[p] = true
+			}
+		}
+	}
+	for path, seen := range wantPaths {
+		if !seen {
+			t.Errorf("expected descendant-description to report %s; results: %+v", path, results)
+		}
+	}
+}
+
+// TestRunLintCompoundDescendantPath exercises a path with a descendant in
+// the middle ($.methods..result.schema). The selector must peel the
+// descendant ..result, then evaluate .schema as a parent-field check on
+// each resolved result node — and report missing schema fields.
+func TestRunLintCompoundDescendantPath(t *testing.T) {
+	openrpcContent := `{
+        "openrpc": "1.4.0",
+        "info": {"title": "Demo", "version": "1.0.0"},
+        "methods": [
+          {"name": "foo", "params": [], "result": {"name": "r"}}
+        ]
+      }`
+
+	rulesContent := `description: "Result schemas must exist"
+rules:
+  result-schema:
+    description: "Each result must have a schema"
+    given: "$.methods..result.schema"
+    severity: "error"
+    then:
+      function: "truthy"
+`
+
+	results, err := runLintJSON(t, openrpcContent, rulesContent)
+	if err == nil {
+		t.Fatalf("expected linting errors for missing result.schema")
+	}
+
+	found := false
+	for _, r := range results {
+		if r.RuleID != "result-schema" {
+			continue
+		}
+		for _, p := range r.Path {
+			if p == "$['methods'][0]['result']['schema']" {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("expected missing-schema diagnostic at $['methods'][0]['result']['schema'], got: %+v", results)
 	}
 }
 

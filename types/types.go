@@ -1,6 +1,9 @@
 package types
 
-import "github.com/theory/jsonpath"
+import (
+	"github.com/open-rpc/openrpc-linter/selector"
+	"github.com/theory/jsonpath"
+)
 
 type Severity string
 
@@ -44,6 +47,15 @@ type RuleFunctionContext struct {
 	ResolvedDocument interface{}    `json:"resolvedDocument"` // Document with all $refs resolved
 	Path             string         `json:"path,omitempty"`   // Normalized path to the selected node.
 	GivenPath        *jsonpath.Path `json:"-"`                // Parsed JSONPath from Rule.Given.
+
+	// Index is the schema-aware document index, built once per lint run.
+	// Rule functions read it via Target; they should not need it directly.
+	Index *selector.Index `json:"-"`
+
+	// Target is the per-iteration unit set by the rules executor. Each call
+	// to RunRule corresponds to one Target so functions can uniformly
+	// reason about value vs. field mode, presence vs. absence, etc.
+	Target *selector.Target `json:"-"`
 }
 
 type RuleFunction interface {
