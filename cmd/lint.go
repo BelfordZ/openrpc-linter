@@ -203,13 +203,13 @@ func resolveRefs(document interface{}) (interface{}, error) {
 	}
 
 	// Recursively resolve $refs within the document
-	resolved = resolveRefsRecursive(resolved, document)
+	resolved = resolveRefsRecursive(resolved, document, map[string]bool{})
 
 	return resolved, nil
 }
 
 // resolveRefsRecursive recursively resolves $ref references in the document
-func resolveRefsRecursive(current interface{}, root interface{}) interface{} {
+func resolveRefsRecursive(current interface{}, root interface{}, resolving map[string]bool) interface{} {
 	switch v := current.(type) {
 	case map[string]interface{}:
 		// Check if this is a $ref
@@ -217,9 +217,15 @@ func resolveRefsRecursive(current interface{}, root interface{}) interface{} {
 			if refStr, ok := ref.(string); ok {
 				// Handle internal refs (starting with #)
 				if strings.HasPrefix(refStr, "#/") {
+					if resolving[refStr] {
+						return v
+					}
 					resolved := resolveJSONPointer(refStr[2:], root) // Remove the "#/" prefix
 					if resolved != nil {
-						return resolveRefsRecursive(resolved, root)
+						resolving[refStr] = true
+						result := resolveRefsRecursive(resolved, root, resolving)
+						delete(resolving, refStr)
+						return result
 					}
 				}
 			}
@@ -230,7 +236,7 @@ func resolveRefsRecursive(current interface{}, root interface{}) interface{} {
 		// Recursively process all values in the map
 		result := make(map[string]interface{})
 		for key, value := range v {
-			result[key] = resolveRefsRecursive(value, root)
+			result[key] = resolveRefsRecursive(value, root, resolving)
 		}
 		return result
 
@@ -238,7 +244,7 @@ func resolveRefsRecursive(current interface{}, root interface{}) interface{} {
 		// Recursively process all items in the array
 		result := make([]interface{}, len(v))
 		for i, item := range v {
-			result[i] = resolveRefsRecursive(item, root)
+			result[i] = resolveRefsRecursive(item, root, resolving)
 		}
 		return result
 

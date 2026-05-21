@@ -227,6 +227,61 @@ rules:
 	}
 }
 
+func TestRunLintHandlesCyclicSchemaRef(t *testing.T) {
+	openrpcContent := `{
+  "openrpc": "1.4.0",
+  "info": {
+    "title": "Recursive Schema API",
+    "version": "1.0.0"
+  },
+  "methods": [
+    {
+      "name": "getCategory",
+      "params": [],
+      "result": {
+        "name": "category",
+        "schema": {
+          "$ref": "#/components/schemas/Category"
+        }
+      }
+    }
+  ],
+  "components": {
+    "schemas": {
+      "Category": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "parent": {
+            "$ref": "#/components/schemas/Category"
+          }
+        }
+      }
+    }
+  }
+}`
+
+	rulesContent := `description: "Cyclic ref smoke test"
+rules:
+  info-title:
+    description: "Info title must exist"
+    given: "$.info.title"
+    severity: "error"
+    then:
+      function: "truthy"
+`
+
+	results, err := runLintJSON(t, openrpcContent, rulesContent)
+	if err != nil {
+		t.Fatalf("RunLint should handle cyclic schema refs, got: %v", err)
+	}
+	if len(results) != 0 {
+		t.Fatalf("expected no lint results, got %+v", results)
+	}
+}
+
 // TestRunLintDescendantDescriptionReportsMissingCandidates exercises the
 // schema-aware descendant path that the old truthy implementation could not
 // satisfy: $..description must surface MISSING descriptions on every
@@ -261,9 +316,9 @@ rules:
 	// Three candidate parents per the v1.4 meta-schema: info, the method,
 	// and the content descriptor. None of them have description.
 	wantPaths := map[string]bool{
-		"$['info']['description']":                          false,
-		"$['methods'][0]['description']":                    false,
-		"$['methods'][0]['params'][0]['description']":       false,
+		"$['info']['description']":                    false,
+		"$['methods'][0]['description']":              false,
+		"$['methods'][0]['params'][0]['description']": false,
 	}
 	for _, r := range results {
 		if r.RuleID != "descendant-description" {
