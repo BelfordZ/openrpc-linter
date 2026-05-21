@@ -89,8 +89,7 @@ func selectSegments(
 	// 2b) Compound descendant: $.scope..f.rest. Do the descendant step
 	//     first using whatever the descendant segment is (named or not),
 	//     then re-run Select with the remaining segments rooted at each
-	//     intermediate node. This is the recursive case the plan calls
-	//     out as "compound by recursion, not by pipeline".
+	//     intermediate node. This is the recursive case
 	midSegments := append(append([]*spec.Segment{}, prefix...), descSeg)
 	midTargets := selectSegments(midSegments, current, root, spec.NormalizedPath{}, idx)
 
