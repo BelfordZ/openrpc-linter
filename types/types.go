@@ -10,6 +10,7 @@ const (
 	SeverityError Severity = "error"
 	SeverityWarn  Severity = "warn"
 	SeverityInfo  Severity = "info"
+	SeverityIgnore Severity = "ignore"
 )
 
 type RuleDefaults string

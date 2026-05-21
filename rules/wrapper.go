@@ -33,8 +33,42 @@ func (rw *RulesWrapper) ResolvedRules() (map[string]types.Rule, error) {
 	if err != nil {
 		return nil, err
 	}
-	maps.Copy(merged, rw.Rules) // user rules win
+
+	merged = mergeRules(merged, rw.Rules)
 	return merged, nil
+}
+
+func mergeRule(base types.Rule, override types.Rule) types.Rule {
+	if override.Description != "" {
+		base.Description = override.Description
+	}
+	if override.Given != "" {
+		base.Given = override.Given
+	}
+	if override.Then != nil {
+		base.Then = override.Then
+	}
+	if override.Extends != nil {
+		base.Extends = override.Extends
+	}
+	if override.Severity != "" {
+		base.Severity = override.Severity
+	}
+	return base
+}
+
+func mergeRules(base map[string]types.Rule, overrides map[string]types.Rule) map[string]types.Rule {
+	merged := make(map[string]types.Rule, len(base))
+	maps.Copy(merged, base)
+	for id, overrideRule := range overrides {
+		base, exists := base[id]
+		if exists {
+			merged[id] = mergeRule(base, overrideRule)
+			continue
+		}
+		merged[id] = overrideRule
+	}
+	return merged
 }
 
 func getExtendedRules(exts []types.RuleDefaults) (map[string]types.Rule, error) {

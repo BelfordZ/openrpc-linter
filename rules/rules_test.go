@@ -90,10 +90,10 @@ func TestResolvedRulesExtends(t *testing.T) {
 
 func TestExecuteRule(t *testing.T) {
 	tests := []struct {
-		name        string
-		rule        *types.Rule
-		document    interface{}
-		context     types.RuleFunctionContext
+		name         string
+		rule         *types.Rule
+		document     interface{}
+		context      types.RuleFunctionContext
 		expectError  bool
 		expectedMsg  string
 		expectedPath []string
