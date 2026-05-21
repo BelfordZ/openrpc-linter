@@ -8,9 +8,9 @@ import (
 type Severity string
 
 const (
-	SeverityError Severity = "error"
-	SeverityWarn  Severity = "warn"
-	SeverityInfo  Severity = "info"
+	SeverityError  Severity = "error"
+	SeverityWarn   Severity = "warn"
+	SeverityInfo   Severity = "info"
 	SeverityIgnore Severity = "ignore"
 )
 
@@ -19,6 +19,8 @@ type RuleDefaults string
 const (
 	RuleExtensionRecommended RuleDefaults = "recommended"
 )
+
+type ResolvingRefs = map[string]bool
 
 type Rule struct {
 	Description string      `json:"description" yaml:"description"`
