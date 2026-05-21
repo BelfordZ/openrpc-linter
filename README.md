@@ -40,27 +40,27 @@ rules:
 The built-in functions currently include:
 
 - `truthy`: require a selected value to be present and non-empty
-- `unique`: require a field value to be unique across the selected collection
+- `unique`: require every selected value to be distinct across one rule run
 
-Example `unique` rules:
+`unique` is symmetric with `truthy`: point `given` directly at the values you want to compare. By default duplicates are tracked in a single global bucket per rule run. Set `functionOptions.scope` to a JSONPath to partition duplicates by the longest-matching scope; targets outside every scope match are skipped (not deduped globally).
 
 ```yaml
 rules:
   unique-method-names:
     description: "Method names must be unique"
-    given: "$.methods"
+    given: "$.methods[*].name"
     severity: "error"
     then:
-      field: "name"
       function: "unique"
 
   unique-param-names-per-method:
     description: "Param names should be unique within each method"
-    given: "$.methods[*].params"
+    given: "$.methods[*].params[*].name"
     severity: "error"
     then:
-      field: "name"
       function: "unique"
+      functionOptions:
+        scope: "$.methods[*]"
 ```
 
-`unique` supports `then.functionOptions.ignoreMissing`, which defaults to `true`.
+`unique` also supports `then.functionOptions.ignoreMissing`, which defaults to `true` and only matters for `given` paths whose terminal segment is a field name (so the selector can emit missing-field targets).

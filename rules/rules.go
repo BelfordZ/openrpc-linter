@@ -27,10 +27,11 @@ func ExecuteRule(rule *types.Rule, context types.RuleFunctionContext) ([]types.R
 		return []types.RuleFunctionResult{}, nil
 	}
 
-	ruleFunc := functions.FunctionRegistry[rule.Then.Function]
-	if ruleFunc == nil {
+	factory := functions.FunctionRegistry[rule.Then.Function]
+	if factory == nil {
 		return nil, fmt.Errorf("unknown function: %s", rule.Then.Function)
 	}
+	ruleFunc := factory()
 
 	path, err := jsonpath.Parse(rule.Given)
 	if err != nil {
