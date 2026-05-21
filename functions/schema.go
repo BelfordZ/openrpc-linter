@@ -13,6 +13,12 @@ type SchemaRule struct {
 }
 
 func (r *SchemaRule) RunRule(value interface{}, context types.RuleFunctionContext) []types.RuleFunctionResult {
+	// Same reasoning as UniqueRule: a missing-field Target has nothing for
+	// schema validation to chew on. Skip and let truthy report absence.
+	if t := context.Target; t != nil && t.Field != "" && !t.Exists {
+		return nil
+	}
+
 	then := context.Rule.Then
 
 	if len(then.FunctionOptions) == 0 {
