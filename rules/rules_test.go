@@ -361,6 +361,52 @@ func TestExecuteRuleTruthyReportsMissingFieldsUnderWildcardParent(t *testing.T) 
 	}
 }
 
+func TestExecuteRuleTruthyRequiresWildcardCollectionWhenIntermediateFieldMissing(t *testing.T) {
+	rule := &types.Rule{
+		Description: "Method params",
+		Given:       "$.methods[*].params[*]",
+		Then: &types.RuleAction{
+			Function: "truthy",
+		},
+	}
+	document := map[string]interface{}{
+		"methods": []interface{}{
+			map[string]interface{}{
+				"name": "first",
+				"params": []interface{}{
+					map[string]interface{}{"name": "id"},
+				},
+			},
+			map[string]interface{}{
+				"name": "second",
+			},
+			map[string]interface{}{
+				"name": "third",
+				"params": []interface{}{
+					map[string]interface{}{"name": "limit"},
+				},
+			},
+		},
+	}
+
+	results, err := ExecuteRule(rule, types.RuleFunctionContext{
+		Rule:     rule,
+		Document: document,
+	})
+	if err != nil {
+		t.Fatalf("expected truthy rule to execute successfully, got: %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("expected one missing params result, got %+v", results)
+	}
+	if results[0].Message != "Missing required field 'params' at $['methods'][1]['params']" {
+		t.Fatalf("unexpected missing-field result: %+v", results[0])
+	}
+	if !reflect.DeepEqual(results[0].Path, []string{"$['methods'][1]['params']"}) {
+		t.Fatalf("expected missing params path, got %+v", results[0].Path)
+	}
+}
+
 func TestExecuteRulePassesGivenPathToRuleFunctions(t *testing.T) {
 	const functionName = "captureGivenPath"
 	previous := functions.FunctionRegistry[functionName]
