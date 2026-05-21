@@ -315,6 +315,9 @@ rules:
 	}
 	if strings.Contains(outputStr, "Missing required field 'description'") {
 		t.Fatalf("Expected method description violation to be skipped, got:\n%s", outputStr)
+	}
+}
+
 // TestRunLintDescendantDescriptionReportsMissingCandidates exercises the
 // schema-aware descendant path that the old truthy implementation could not
 // satisfy: $..description must surface MISSING descriptions on every
