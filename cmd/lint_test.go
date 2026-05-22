@@ -81,8 +81,11 @@ rules:
 		t.Errorf("Expected error output with ❌, but got: %s", outputStr)
 	}
 
-	if !strings.Contains(outputStr, "Missing required field 'description' at $['info']['description']") {
-		t.Errorf("Expected 'Missing required field 'description' at $['info']['description']' in output, but got: %s", outputStr)
+	if !strings.Contains(outputStr, "info.description") {
+		t.Errorf("Expected friendly path info.description in output, but got: %s", outputStr)
+	}
+	if !strings.Contains(outputStr, "missing required field 'description'") {
+		t.Errorf("Expected missing required field message in output, but got: %s", outputStr)
 	}
 
 	if !strings.Contains(outputStr, "1 error(s) found") {
@@ -222,8 +225,11 @@ rules:
 	}
 
 	outputStr := output.String()
-	if !strings.Contains(outputStr, "Missing required field 'description' at $['info']['description']") {
-		t.Fatalf("Expected warning violation output, got:\n%s", outputStr)
+	if !strings.Contains(outputStr, "info.description") {
+		t.Fatalf("Expected warning with friendly path, got:\n%s", outputStr)
+	}
+	if !strings.Contains(outputStr, "missing required field 'description'") {
+		t.Fatalf("Expected warning violation message, got:\n%s", outputStr)
 	}
 	if !strings.Contains(outputStr, "⚠️") {
 		t.Fatalf("Expected warning prefix in output, got:\n%s", outputStr)

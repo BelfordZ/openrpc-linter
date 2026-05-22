@@ -17,6 +17,20 @@ openrpc-linter lint openrpc.json -r rules.yml -f json
 openrpc-linter validate openrpc.json
 ```
 
+### Lint output
+
+Text violations include document anchors (RPC method name, param name, component schema key, etc.) and a friendly path instead of only opaque array indices:
+
+```text
+❌ method-errors  method "eth_getLogs"  methods[71].errors
+    missing required field 'errors'
+
+⚠️ schema-title  schema "Pet"  components.schemas.Pet.title
+    missing required field 'title'
+```
+
+JSON output adds a `pathLabels` object alongside the canonical `path` array.
+
 ## Install
 
 ```bash

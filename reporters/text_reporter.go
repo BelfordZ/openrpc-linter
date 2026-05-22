@@ -5,6 +5,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/open-rpc/openrpc-linter/location"
 	"github.com/open-rpc/openrpc-linter/types"
 )
 
@@ -59,7 +60,15 @@ func (r *TextReporter) Format(results []types.RuleFunctionResult, totalRules int
 				continue
 			}
 
-			if _, err := fmt.Fprintf(output, "%s %s at %s: %s\n", prefix, ruleID, result.Path[0], result.Message); err != nil {
+			loc := violationLocation(result)
+			if loc != "" {
+				if _, err := fmt.Fprintf(output, "%s %s  %s\n    %s\n", prefix, ruleID, loc, result.Message); err != nil {
+					return err
+				}
+				continue
+			}
+
+			if _, err := fmt.Fprintf(output, "%s %s  %s\n    %s\n", prefix, ruleID, location.FriendlyPath(result.Path[0]), result.Message); err != nil {
 				return err
 			}
 		}
