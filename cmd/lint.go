@@ -155,6 +155,9 @@ func RunLint(opts LintOptions) error {
 	location.Enrich(allResults, resolvedDoc)
 
 	reporter := GetReporter(opts.Format)
+	if tr, ok := reporter.(*reporters.TextReporter); ok {
+		tr.SourceFile = opts.OpenRPCFile
+	}
 	if err := reporter.Format(allResults, totalRules, opts.Output); err != nil {
 		return err
 	}

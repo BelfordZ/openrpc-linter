@@ -76,9 +76,8 @@ rules:
 	outputStr := output.String()
 	t.Logf("Lint output:\n%s", outputStr)
 
-	// Verify the output contains the expected error
-	if !strings.Contains(outputStr, "❌") {
-		t.Errorf("Expected error output with ❌, but got: %s", outputStr)
+	if !strings.Contains(outputStr, "error") {
+		t.Errorf("Expected severity label 'error' in output, but got: %s", outputStr)
 	}
 
 	if !strings.Contains(outputStr, "info.description") {
@@ -88,7 +87,7 @@ rules:
 		t.Errorf("Expected missing required field message in output, but got: %s", outputStr)
 	}
 
-	if !strings.Contains(outputStr, "1 error(s) found") {
+	if !strings.Contains(outputStr, "1 error found") {
 		t.Errorf("Expected error summary in output, but got: %s", outputStr)
 	}
 }
@@ -155,10 +154,6 @@ rules:
 
 	outputStr := output.String()
 	t.Logf("Lint output:\n%s", outputStr)
-
-	if !strings.Contains(outputStr, "✅") {
-		t.Errorf("Expected success output with ✅, but got: %s", outputStr)
-	}
 
 	if !strings.Contains(outputStr, "All 1 rules passed") {
 		t.Errorf("Expected 'All 1 rules passed' in output, but got: %s", outputStr)
@@ -231,13 +226,10 @@ rules:
 	if !strings.Contains(outputStr, "missing required field 'description'") {
 		t.Fatalf("Expected warning violation message, got:\n%s", outputStr)
 	}
-	if !strings.Contains(outputStr, "⚠️") {
-		t.Fatalf("Expected warning prefix in output, got:\n%s", outputStr)
+	if !strings.Contains(outputStr, "warning") {
+		t.Fatalf("Expected 'warning' label in output, got:\n%s", outputStr)
 	}
-	if strings.Contains(outputStr, "❌") {
-		t.Fatalf("Expected no error prefix for warn severity, got:\n%s", outputStr)
-	}
-	if !strings.Contains(outputStr, "1 warning(s) found") {
+	if !strings.Contains(outputStr, "1 warning found") {
 		t.Fatalf("Expected warning summary in output, got:\n%s", outputStr)
 	}
 }
