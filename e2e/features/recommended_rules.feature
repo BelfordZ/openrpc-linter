@@ -5,7 +5,7 @@ Feature: Recommended ruleset
   Background:
     Given the bundled recommended ruleset is loaded
 
-  Scenario Outline: Missing required field fails the matching error rule
+  Scenario Outline: Missing field fails the matching error rule
     Given a fully populated OpenRPC document covering every approved rule
     And the document is missing "<path>"
     When I run the linter
@@ -19,7 +19,7 @@ Feature: Recommended ruleset
       | method-errors      | methods[0].errors      |
       | method-examples    | methods[0].examples    |
 
-  Scenario Outline: Missing required field warns for the matching rule
+  Scenario Outline: Missing field warns for the matching rule
     Given a fully populated OpenRPC document covering every approved rule
     And the document is missing "<path>"
     When I run the linter

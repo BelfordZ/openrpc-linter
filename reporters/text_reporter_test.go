@@ -21,7 +21,7 @@ func TestGroupHeader_Method(t *testing.T) {
 	err := reporter.Format([]types.RuleFunctionResult{
 		{
 			RuleID:     "method-description",
-			Message:    "missing required field 'description'",
+			Message:    "missing field 'description'",
 			Path:       []string{"$['methods'][0]['description']"},
 			PathLabels: types.PathLabels{Method: "eth_getLogs"},
 			Severity:   types.SeverityError,
@@ -53,7 +53,7 @@ func TestGroupHeader_ComponentsSchema(t *testing.T) {
 	err := reporter.Format([]types.RuleFunctionResult{
 		{
 			RuleID:     "schema-title",
-			Message:    "missing required field 'title'",
+			Message:    "missing field 'title'",
 			Path:       []string{"$['components']['schemas']['Pet']['title']"},
 			PathLabels: types.PathLabels{Section: "components", Schema: "Pet"},
 			Severity:   types.SeverityWarn,
@@ -79,7 +79,7 @@ func TestGroupHeader_InfoSection(t *testing.T) {
 	err := reporter.Format([]types.RuleFunctionResult{
 		{
 			RuleID:     "info-license",
-			Message:    "missing required field 'license'",
+			Message:    "missing field 'license'",
 			Path:       []string{"$['info']['license']"},
 			PathLabels: types.PathLabels{Section: "info"},
 			Severity:   types.SeverityWarn,
@@ -101,7 +101,7 @@ func TestGroupHeader_General(t *testing.T) {
 	err := reporter.Format([]types.RuleFunctionResult{
 		{
 			RuleID:   "openrpc-version",
-			Message:  "missing required field 'openrpc'",
+			Message:  "missing field 'openrpc'",
 			Path:     []string{"$['openrpc']"},
 			Severity: types.SeverityError,
 		},
@@ -122,7 +122,7 @@ func TestSecondaryLabel_AppendsContinuationLine(t *testing.T) {
 	err := reporter.Format([]types.RuleFunctionResult{
 		{
 			RuleID:     "schema-description",
-			Message:    "missing required field 'description'",
+			Message:    "missing field 'description'",
 			Path:       []string{"$['methods'][0]['result']['schema']['description']"},
 			PathLabels: types.PathLabels{Method: "debug_getBadBlocks", Schema: "Bad block"},
 			Severity:   types.SeverityWarn,
@@ -145,7 +145,7 @@ func TestSecondaryLabel_OmittedWhenSameAsGroup(t *testing.T) {
 	err := reporter.Format([]types.RuleFunctionResult{
 		{
 			RuleID:     "schema-title",
-			Message:    "missing required field 'title'",
+			Message:    "missing field 'title'",
 			Path:       []string{"$['components']['schemas']['Pet']['title']"},
 			PathLabels: types.PathLabels{Section: "components", Schema: "Pet"},
 			Severity:   types.SeverityWarn,
@@ -167,7 +167,7 @@ func TestSecondaryLabel_Param(t *testing.T) {
 	err := reporter.Format([]types.RuleFunctionResult{
 		{
 			RuleID:     "schema-description",
-			Message:    "missing required field 'description'",
+			Message:    "missing field 'description'",
 			Path:       []string{"$['methods'][0]['params'][0]['schema']['description']"},
 			PathLabels: types.PathLabels{Method: "debug_getRawBlock", Param: "Block", Schema: "Block"},
 			Severity:   types.SeverityWarn,

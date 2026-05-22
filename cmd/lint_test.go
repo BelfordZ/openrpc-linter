@@ -83,8 +83,8 @@ rules:
 	if !strings.Contains(outputStr, "info.description") {
 		t.Errorf("Expected friendly path info.description in output, but got: %s", outputStr)
 	}
-	if !strings.Contains(outputStr, "missing required field 'description'") {
-		t.Errorf("Expected missing required field message in output, but got: %s", outputStr)
+	if !strings.Contains(outputStr, "missing field 'description'") {
+		t.Errorf("Expected missing field message in output, but got: %s", outputStr)
 	}
 
 	if !strings.Contains(outputStr, "1 error found") {
@@ -223,7 +223,7 @@ rules:
 	if !strings.Contains(outputStr, "info.description") {
 		t.Fatalf("Expected warning with friendly path, got:\n%s", outputStr)
 	}
-	if !strings.Contains(outputStr, "missing required field 'description'") {
+	if !strings.Contains(outputStr, "missing field 'description'") {
 		t.Fatalf("Expected warning violation message, got:\n%s", outputStr)
 	}
 	if !strings.Contains(outputStr, "warning") {
@@ -320,7 +320,7 @@ rules:
 	if strings.Contains(outputStr, "method-description") {
 		t.Fatalf("Expected disabled recommended rule to be omitted from output, got:\n%s", outputStr)
 	}
-	if strings.Contains(outputStr, "Missing required field 'description'") {
+	if strings.Contains(outputStr, "Missing field 'description'") {
 		t.Fatalf("Expected method description violation to be skipped, got:\n%s", outputStr)
 	}
 }

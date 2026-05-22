@@ -180,7 +180,7 @@ func terminalName(seg *spec.Segment) (string, bool) {
 }
 
 // candidateTitle looks up the matched schema title for a parent path so
-// diagnostics can say e.g. "Missing required field 'description' on
+// diagnostics can say e.g. "Missing field 'description' on
 // methodObject at ...". Returns "" if the parent wasn't indexed.
 func candidateTitle(idx *Index, path spec.NormalizedPath) string {
 	if idx == nil {

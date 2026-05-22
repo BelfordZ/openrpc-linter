@@ -31,20 +31,20 @@ openrpc.json
   path                                     level    message                                                   rule
 
 debug_getBadBlocks
-  methods[0].description                   error    missing required field 'description'                      method-description
-  methods[0].result.schema.description     warning  missing required field 'description'                      schema-description
+  methods[0].description                   error    missing field 'description'                               method-description
+  methods[0].result.schema.description     warning  missing field 'description'                               schema-description
     schema: "Bad block"
 
 debug_getRawBlock
-  methods[1].params[0].schema.description  warning  missing required field 'description'                      schema-description
+  methods[1].params[0].schema.description  warning  missing field 'description'                               schema-description
     param: "n"
     schema: "Block"
 
 schema "Pet"
-  components.schemas.Pet.title             warning  missing required field 'title'                            schema-title
+  components.schemas.Pet.title             warning  missing field 'title'                                     schema-title
 
 info
-  info.license                             warning  missing required field 'license'                          info-license
+  info.license                             warning  missing field 'license'                                   info-license
 
 7 errors, 8 warnings found in 8 rules
 ```

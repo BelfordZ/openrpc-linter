@@ -131,7 +131,7 @@ func TestExecuteRule(t *testing.T) {
 				},
 			},
 			expectError: true,
-			expectedMsg: "missing required field 'description'",
+			expectedMsg: "missing field 'description'",
 		},
 		{
 			name: "truthy rule with missing field on selected method includes path",
@@ -150,7 +150,7 @@ func TestExecuteRule(t *testing.T) {
 				},
 			},
 			expectError:  true,
-			expectedMsg:  "missing required field 'description'",
+			expectedMsg:  "missing field 'description'",
 			expectedPath: []string{"$['methods'][0]['description']"},
 		},
 		{
@@ -347,7 +347,7 @@ func TestExecuteRuleTruthyReportsMissingFieldsUnderWildcardParent(t *testing.T) 
 	if len(results) != 2 {
 		t.Fatalf("expected missing and falsey description results, got %+v", results)
 	}
-	if results[0].Message != "missing required field 'description'" {
+	if results[0].Message != "missing field 'description'" {
 		t.Fatalf("unexpected missing-field result: %+v", results[0])
 	}
 	if !reflect.DeepEqual(results[0].Path, []string{"$['methods'][1]['description']"}) {
