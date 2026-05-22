@@ -36,11 +36,27 @@ type RuleAction struct {
 	FunctionOptions map[string]interface{} `json:"functionOptions,omitempty" yaml:"functionOptions,omitempty"`
 }
 
+// PathLabels holds human-readable anchors for a violation path in the document.
+type PathLabels struct {
+	Method     string `json:"method,omitempty"`
+	Param      string `json:"param,omitempty"`
+	Schema     string `json:"schema,omitempty"`
+	Descriptor string `json:"descriptor,omitempty"`
+	Tag        string `json:"tag,omitempty"`
+	Section    string `json:"section,omitempty"`
+}
+
+func (l PathLabels) IsEmpty() bool {
+	return l.Method == "" && l.Param == "" && l.Schema == "" &&
+		l.Descriptor == "" && l.Tag == "" && l.Section == ""
+}
+
 type RuleFunctionResult struct {
-	Message  string   `json:"message,omitempty"`
-	Path     []string `json:"path,omitempty"`
-	RuleID   string   `json:"ruleId,omitempty"`
-	Severity Severity `json:"severity,omitempty" yaml:"severity,omitempty"`
+	Message    string     `json:"message,omitempty"`
+	Path       []string   `json:"path,omitempty"`
+	PathLabels PathLabels `json:"pathLabels,omitempty"`
+	RuleID     string     `json:"ruleId,omitempty"`
+	Severity   Severity   `json:"severity,omitempty" yaml:"severity,omitempty"`
 }
 
 type RuleFunctionContext struct {

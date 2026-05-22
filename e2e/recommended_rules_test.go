@@ -123,14 +123,14 @@ func initializeRecommendedScenario(sc *godog.ScenarioContext, s *lintScenario) {
 	})
 
 	sc.Step(`^the linter exits non-zero$`, func() error {
-		if s.err != nil || strings.Contains(s.output.String(), "❌") {
+		if s.err != nil {
 			return nil
 		}
 		return fmt.Errorf("expected linter to exit non-zero, output:\n%s", s.output.String())
 	})
 
 	sc.Step(`^the linter exits zero$`, func() error {
-		if s.err == nil && !strings.Contains(s.output.String(), "❌") {
+		if s.err == nil {
 			return nil
 		}
 		return fmt.Errorf("expected linter to exit zero, got %v\nOutput:\n%s", s.err, s.output.String())
@@ -145,7 +145,7 @@ func initializeRecommendedScenario(sc *godog.ScenarioContext, s *lintScenario) {
 
 	sc.Step(`^the lint output should contain a warning for rule "([^"]*)"$`, func(rule string) error {
 		output := s.output.String()
-		if strings.Contains(output, "⚠️") && strings.Contains(output, rule) {
+		if strings.Contains(output, "warning") && strings.Contains(output, rule) {
 			return nil
 		}
 		return fmt.Errorf("expected warning output for rule %q, got:\n%s", rule, output)

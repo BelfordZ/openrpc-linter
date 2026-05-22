@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/open-rpc/openrpc-linter/location"
 	"github.com/open-rpc/openrpc-linter/reporters"
 	"github.com/open-rpc/openrpc-linter/rules"
 	"github.com/open-rpc/openrpc-linter/selector"
@@ -151,7 +152,12 @@ func RunLint(opts LintOptions) error {
 		allResults = append(allResults, results...)
 	}
 
+	location.Enrich(allResults, resolvedDoc)
+
 	reporter := GetReporter(opts.Format)
+	if tr, ok := reporter.(*reporters.TextReporter); ok {
+		tr.SourceFile = opts.OpenRPCFile
+	}
 	if err := reporter.Format(allResults, totalRules, opts.Output); err != nil {
 		return err
 	}
