@@ -27,7 +27,7 @@ func (r *TruthyRule) RunRule(value interface{}, context types.RuleFunctionContex
 
 	if t.Field != "" && !t.Exists {
 		return []types.RuleFunctionResult{{
-			Message: "missing required field '" + t.Field + "'",
+			Message: "missing field '" + t.Field + "'",
 			Path:    resultPath(t.PathString()),
 		}}
 	}
