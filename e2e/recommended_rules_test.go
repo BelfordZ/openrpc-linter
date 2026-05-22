@@ -143,6 +143,14 @@ func initializeRecommendedScenario(sc *godog.ScenarioContext, s *lintScenario) {
 		return fmt.Errorf("expected output to mention rule %q, got:\n%s", rule, s.output.String())
 	})
 
+	sc.Step(`^the lint output should contain a warning for rule "([^"]*)"$`, func(rule string) error {
+		output := s.output.String()
+		if strings.Contains(output, "⚠️") && strings.Contains(output, rule) {
+			return nil
+		}
+		return fmt.Errorf("expected warning output for rule %q, got:\n%s", rule, output)
+	})
+
 	sc.Step(`^the lint output should not mention rule "([^"]*)"$`, func(rule string) error {
 		if !strings.Contains(s.output.String(), rule) {
 			return nil

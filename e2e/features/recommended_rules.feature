@@ -5,7 +5,7 @@ Feature: Recommended ruleset
   Background:
     Given the bundled recommended ruleset is loaded
 
-  Scenario Outline: Missing required field fails the matching rule
+  Scenario Outline: Missing required field fails the matching error rule
     Given a fully populated OpenRPC document covering every approved rule
     And the document is missing "<path>"
     When I run the linter
@@ -13,13 +13,23 @@ Feature: Recommended ruleset
     And the lint output should mention rule "<rule>"
 
     Examples:
+      | rule               | path                   |
+      | info-description   | info.description       |
+      | method-description | methods[0].description |
+      | method-errors      | methods[0].errors      |
+      | method-examples    | methods[0].examples    |
+
+  Scenario Outline: Missing required field warns for the matching rule
+    Given a fully populated OpenRPC document covering every approved rule
+    And the document is missing "<path>"
+    When I run the linter
+    Then the linter exits zero
+    And the lint output should contain a warning for rule "<rule>"
+
+    Examples:
       | rule                | path                                    |
-      | info-description    | info.description                        |
       | info-license        | info.license                            |
       | method-summary      | methods[0].summary                      |
-      | method-description  | methods[0].description                  |
-      | method-errors       | methods[0].errors                       |
-      | method-examples     | methods[0].examples                     |
       | result-description  | methods[0].result.description           |
       | tag-description     | methods[0].tags[0].description          |
       | error-description   | methods[0].errors[0].description        |
@@ -27,12 +37,12 @@ Feature: Recommended ruleset
       | schema-title        | methods[0].params[0].schema.title       |
       | schema-description  | methods[0].params[0].schema.description |
 
-  Scenario Outline: Out-of-bounds value fails the matching rule
+  Scenario Outline: Out-of-bounds value warns for the matching rule
     Given a fully populated OpenRPC document covering every approved rule
     And the document is mutated so that "<path>" <mutation>
     When I run the linter
-    Then the linter exits non-zero
-    And the lint output should mention rule "<rule>"
+    Then the linter exits zero
+    And the lint output should contain a warning for rule "<rule>"
 
     Examples:
       | rule                  | path                         | mutation                         |
