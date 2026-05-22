@@ -225,6 +225,15 @@ rules:
 	if !strings.Contains(outputStr, "Missing required field 'description' at $['info']['description']") {
 		t.Fatalf("Expected warning violation output, got:\n%s", outputStr)
 	}
+	if !strings.Contains(outputStr, "⚠️") {
+		t.Fatalf("Expected warning prefix in output, got:\n%s", outputStr)
+	}
+	if strings.Contains(outputStr, "❌") {
+		t.Fatalf("Expected no error prefix for warn severity, got:\n%s", outputStr)
+	}
+	if !strings.Contains(outputStr, "1 warning(s) found") {
+		t.Fatalf("Expected warning summary in output, got:\n%s", outputStr)
+	}
 }
 
 func TestRunLintSeverityIgnoreDisablesRecommendedRule(t *testing.T) {

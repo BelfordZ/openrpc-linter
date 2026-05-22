@@ -37,9 +37,10 @@ type RuleAction struct {
 }
 
 type RuleFunctionResult struct {
-	Message string   `json:"message,omitempty"`
-	Path    []string `json:"path,omitempty"`
-	RuleID  string   `json:"ruleId,omitempty"`
+	Message  string   `json:"message,omitempty"`
+	Path     []string `json:"path,omitempty"`
+	RuleID   string   `json:"ruleId,omitempty"`
+	Severity Severity `json:"severity,omitempty" yaml:"severity,omitempty"`
 }
 
 type RuleFunctionContext struct {

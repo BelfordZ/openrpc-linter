@@ -153,6 +153,9 @@ rules:
 	if results[0].RuleID != "unique-method-summaries" {
 		t.Fatalf("expected rule id to be set, got: %+v", results[0])
 	}
+	if results[0].Severity != types.SeverityWarn {
+		t.Fatalf("expected warn severity, got: %+v", results[0].Severity)
+	}
 	if results[0].Message != `Duplicate value "Shared summary" (first seen at $['methods'][0]['summary'])` {
 		t.Fatalf("unexpected warning message: %+v", results[0])
 	}
