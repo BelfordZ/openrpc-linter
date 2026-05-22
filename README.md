@@ -10,6 +10,9 @@ Fast, extensible linter for OpenRPC documents.
 # Lint with default rules
 openrpc-linter lint openrpc.json -r rules.yml
 
+# Create a basic rules.yml using the recommended rules
+openrpc-linter init
+
 # JSON output
 openrpc-linter lint openrpc.json -r rules.yml -f json
 
@@ -72,6 +75,13 @@ go install github.com/open-rpc/openrpc-linter@latest
 ## Rules
 
 Create a rules `rules.yml` with rules you want to apply:
+
+```yaml
+extends:
+  - recommended
+```
+
+Or define custom rules:
 
 ```yaml
 rules:
